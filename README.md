@@ -1,5 +1,7 @@
 # Abstracr builder
 
+[![Packagist](https://img.shields.io/packagist/v/RunOpenCode/abstract-builder.svg)](https://packagist.org/packages/runopencode/abstract-builder)
+
 If you intend to use builder pattern in your project 
 [(see article on Wikipedia)](https://en.wikipedia.org/wiki/Builder_pattern)
 you can use a prototype implementation of builder pattern from this library.
