@@ -16,7 +16,7 @@ abstract class AbstractBuilder
      *
      * @var array
      */
-    protected $data;
+    protected $_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32;
 
     /**
      * AbstractBuilder constructor.
@@ -25,9 +25,9 @@ abstract class AbstractBuilder
      */
     public function __construct()
     {
-        $this->data = $this->configureParameters();
+        $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32 = $this->configureParameters();
 
-        if (0 === count($this->data)) {
+        if (0 === count($this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)) {
             throw new \RuntimeException('Builder expects at least one parameter to be defined.');
         }
     }
@@ -40,7 +40,7 @@ abstract class AbstractBuilder
     public function build()
     {
         $reflector = new \ReflectionClass($this->getObjectFqcn());
-        return $reflector->newInstanceArgs(array_values($this->data));
+        return $reflector->newInstanceArgs(array_values($this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32));
     }
 
     /**
@@ -68,11 +68,11 @@ abstract class AbstractBuilder
      */
     public function __set($name, $value)
     {
-        if (!array_key_exists($name, $this->data)) {
+        if (!array_key_exists($name, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)) {
             throw new \InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
         }
 
-        $this->data[$name] = $value;
+        $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name] = $value;
     }
 
     /**
@@ -85,11 +85,11 @@ abstract class AbstractBuilder
      */
     public function __get($name)
     {
-        if (!array_key_exists($name, $this->data)) {
+        if (!array_key_exists($name, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)) {
             throw new \InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
         }
 
-        return $this->data[$name];
+        return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name];
     }
 
     /**
@@ -100,7 +100,7 @@ abstract class AbstractBuilder
      */
     public function __isset($name)
     {
-        return array_key_exists($name, $this->data);
+        return array_key_exists($name, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32);
     }
 
     /**
@@ -117,7 +117,7 @@ abstract class AbstractBuilder
         $property = lcfirst(substr($name, 3));
 
         if (
-            !array_key_exists($property, $this->data)
+            !array_key_exists($property, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)
             ||
             (strpos($name, 'set') !== 0 && strpos($name, 'get') !== 0)
         ) {
@@ -133,10 +133,10 @@ abstract class AbstractBuilder
         }
 
         if (strpos($name, 'get') === 0) {
-            return $this->data[$property];
+            return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$property];
         }
 
-        $this->data[$property] = $arguments[0];
+        $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$property] = $arguments[0];
 
         return $this;
     }
