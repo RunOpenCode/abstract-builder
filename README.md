@@ -2,6 +2,11 @@
 
 [![Packagist](https://img.shields.io/packagist/v/RunOpenCode/abstract-builder.svg)](https://packagist.org/packages/runopencode/abstract-builder)
 
+[![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/?branch=master)
+[![Code Coverage](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/?branch=master)
+[![Build Status](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/build.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/build-status/master)
+[![Build Status](https://travis-ci.org/RunOpenCode/abstract-builder.svg?branch=master)](https://travis-ci.org/RunOpenCode/abstract-builder)
+
 If you intend to use builder pattern in your project 
 [(see article on Wikipedia)](https://en.wikipedia.org/wiki/Builder_pattern)
 you can use a prototype implementation of builder pattern from this library.
