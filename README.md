@@ -1,11 +1,12 @@
 # Abstracr builder
 
 [![Packagist](https://img.shields.io/packagist/v/RunOpenCode/abstract-builder.svg)](https://packagist.org/packages/runopencode/abstract-builder)
-
 [![Scrutinizer Code Quality](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/quality-score.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/?branch=master)
 [![Code Coverage](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/coverage.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/?branch=master)
 [![Build Status](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/badges/build.png?b=master)](https://scrutinizer-ci.com/g/RunOpenCode/abstract-builder/build-status/master)
 [![Build Status](https://travis-ci.org/RunOpenCode/abstract-builder.svg?branch=master)](https://travis-ci.org/RunOpenCode/abstract-builder)
+
+[![SensioLabsInsight](https://insight.sensiolabs.com/projects/15e91ee6-47e2-46ef-bb6a-b013e36620a2/big.png)](https://insight.sensiolabs.com/projects/15e91ee6-47e2-46ef-bb6a-b013e36620a2)
 
 If you intend to use builder pattern in your project 
 [(see article on Wikipedia)](https://en.wikipedia.org/wiki/Builder_pattern)
