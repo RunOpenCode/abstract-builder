@@ -15,7 +15,7 @@ which ought to be builded must do such validation, because construction
 process of any instance of any class must be valid whether is executed
 with or without builder implementation.
 
-## Example
+## Implementation example
 
 Let's say that we have some class `Message` for which we have to provide
 a builder class. Here is how to do so:
@@ -73,7 +73,54 @@ a builder class. Here is how to do so:
         }
     }
     
-    
+## Builder usage example
+
+Start with creating a builder, you can use plain constructor:
+
+    $builder = new MessageBuilder();
+
+or you can use a static method for that:
+
+    $builder = MessageBuilder::create();
+
+You can get/set each individual configured builder property via:
+
+**Property access:**
+
+    $builder->id = 1;
+    $id = $builder->id;
+
+**Setter method:**
+
+    $builder->setId(1);
+    $id = $builder->getId();
+
+**Array access:**
+
+    $builder['id'] = 1;
+    $id = $builder['id'];
+
+**Multiple properties, via array:**
+
+    $builder->fromArray([ 'id' => 1, 'message' => 'Some message' ]);
+    $allProperties = $builder->toArray();
+    $someProperties = $builder->toArray([ 'id', 'message' ]);
+
+And finaly, you can build conrete object by calling `build()` method, or
+invoking builder as method:
+
+    $message = $builder->build();
+    $message = $builder();
+
+## Chaining (fluent interface)
+
+Fluent interface is supported for setter methods, so you can chain them, example:
+
+    $message = MessageBuilder::create()
+                    ->setId(1)
+                    ->setMessage('Some message')
+                    ->setTimestamp(new \DateTime('now'))
+                    ->build();
 
 
 
