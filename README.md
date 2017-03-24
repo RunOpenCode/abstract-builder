@@ -16,6 +16,11 @@ In order to do so, you have to create your own builder class, extend
 `RunOpenCode\AbstractBuilder\AbstractBuilder` and implement methods
 `configureParameters` and `getObjectFqcn`.
 
+For those extra lazy developers, there is a
+`RunOpenCode\AbstractBuilder\ReflectiveAbstractBuilder` as well, which
+implements `configureParameters` method by introspecting constructor parameters
+and default values.
+
 **NOTE:** Builder class MUST NOT validate provided parameters. Class
 which ought to be builded must do such validation, because construction
 process of any instance of any class must be valid whether is executed
