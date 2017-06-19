@@ -32,17 +32,23 @@ class Message
     private $timestamp;
 
     /**
+     * @var int
+     */
+    private $count;
+
+    /**
      * Message constructor.
      *
      * @param int $id
      * @param string $message
      * @param \DateTime $timestamp
      */
-    public function __construct($id, $message, \DateTime $timestamp)
+    public function __construct($id, $message, \DateTime $timestamp, $count = 0)
     {
         $this->id = $id;
         $this->message = $message;
         $this->timestamp = $timestamp;
+        $this->count = $count;
     }
 
     /**
@@ -67,5 +73,13 @@ class Message
     public function getTimestamp()
     {
         return $this->timestamp;
+    }
+
+    /**
+     * @return int
+     */
+    public function getCount()
+    {
+        return $this->count;
     }
 }

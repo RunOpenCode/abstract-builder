@@ -74,13 +74,17 @@ abstract class AbstractBuilder implements \ArrayAccess
      *
      * @return array
      */
-    public function toArray(array $keys = array())
+    public function toArray(array $keys = [])
     {
-        if (0 === count($keys)) {
-            return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32;
+        $data = [];
+
+        $keys = (0 === count($keys)) ? array_keys($this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32) : $keys;
+
+        foreach ($keys as $key) {
+            $data[$key] = $this->{$key};
         }
 
-        return array_intersect_key($this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32, array_flip($keys));
+        return $data;
     }
 
     /**
@@ -97,7 +101,12 @@ abstract class AbstractBuilder implements \ArrayAccess
             throw new InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
         }
 
-        $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name] = $value;
+        if (method_exists($this, ($setter =  sprintf('set%s', ucfirst($name))))) {
+            $this->{$setter}($value);
+            return;
+        }
+
+        $this->__doSet($name, $value);
     }
 
     /**
@@ -114,7 +123,11 @@ abstract class AbstractBuilder implements \ArrayAccess
             throw new InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
         }
 
-        return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name];
+        if (method_exists($this, ($getter =  sprintf('get%s', ucfirst($name))))) {
+            return $this->{$getter}();
+        }
+
+        return $this->__doGet($name);
     }
 
     /**
@@ -133,6 +146,7 @@ abstract class AbstractBuilder implements \ArrayAccess
      *
      * @param string $name A method name.
      * @param array $arguments A method arguments.
+     *
      * @return $this|mixed Fluent interface or argument value, depending on method name.
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\BadMethodCallException
@@ -189,6 +203,10 @@ abstract class AbstractBuilder implements \ArrayAccess
      */
     public function offsetGet($offset)
     {
+        if (method_exists($this, ($getter = sprintf('get%s', ucfirst($offset))))) {
+            return $this->{$getter}();
+        }
+
         return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$offset];
     }
 
@@ -199,8 +217,17 @@ abstract class AbstractBuilder implements \ArrayAccess
      */
     public function offsetSet($offset, $value)
     {
+        if (null === $offset) {
+            throw new InvalidArgumentException('Property name for array access of builder parameters must be provided, NULL given.');
+        }
+
         if (!$this->offsetExists($offset)) {
             throw new RuntimeException(sprintf('Undefined property "%s" provided.', $offset));
+        }
+
+        if (method_exists($this, ($setter =  sprintf('set%s', ucfirst($offset))))) {
+            $this->{$setter}($value);
+            return;
         }
 
         $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$offset] = $value;
@@ -228,6 +255,45 @@ abstract class AbstractBuilder implements \ArrayAccess
     public static function createBuilder()
     {
         return new static();
+    }
+
+    /**
+     * Force get value from value storage, without consulting getter.
+     *
+     * Use this method to get raw value of parameter storage when creating getter method.
+     *
+     * @param string $name
+     *
+     * @return mixed
+     */
+    protected function __doGet($name)
+    {
+        if (!array_key_exists($name, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)) {
+            throw new InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
+        }
+
+        return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name];
+    }
+
+    /**
+     * Force set value to value storage, without consulting setter.
+     *
+     * Use this method to set raw value of parameter storage when creating setter method.
+     *
+     * @param string $name
+     * @param mixed $value
+     *
+     * @return $this Fluent interface.
+     * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
+     */
+    protected function __doSet($name, $value)
+    {
+        if (!array_key_exists($name, $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32)) {
+            throw new InvalidArgumentException(sprintf('Unknown property "%s" in "%s".', $name, get_class($this)));
+        }
+
+        $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32[$name] = $value;
+        return $this;
     }
 
     /**

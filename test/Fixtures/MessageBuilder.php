@@ -26,7 +26,8 @@ class MessageBuilder extends AbstractBuilder
         return [
             'id' => null,
             'message' => null,
-            'timestamp' => new \DateTime('now')
+            'timestamp' => new \DateTime('now'),
+            'count' => 0
         ];
     }
 
@@ -36,6 +37,29 @@ class MessageBuilder extends AbstractBuilder
     protected function getObjectFqcn()
     {
         return Message::class;
+    }
+
+    public function getMessage()
+    {
+        return $this->_builder_placeholder_data_87cd3fb3_4fde_49d1_a91f_6411e0862c32['message'];
+    }
+
+    /**
+     * @return int
+     */
+    public function getCount()
+    {
+        return 'getter_invoked';
+    }
+
+    /**
+     * @param int $count
+     * @return string
+     */
+    public function setCount($count)
+    {
+        $this->__doSet('count', $count + 10);
+        return $this;
     }
 
 }

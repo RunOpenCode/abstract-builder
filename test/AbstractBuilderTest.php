@@ -208,6 +208,32 @@ class AbstractBuilderTest extends TestCase
         $builder['none'] = 'something';
     }
 
+    /**
+     * @test
+     */
+    public function itConsultsGetterAndSetterMethodsAlways()
+    {
+        $builder = MessageBuilder::createBuilder();
+
+        $this->assertEquals('getter_invoked', $builder->getCount());
+        $this->assertEquals('getter_invoked', $builder['count']);
+        $this->assertEquals('getter_invoked', $builder->count);
+
+        $reflectionMethod = new \ReflectionMethod(AbstractBuilder::class, '__doGet');
+        $reflectionMethod->setAccessible(true);
+
+        $builder->setCount(10);
+        $this->assertEquals(20, $reflectionMethod->invoke($builder, 'count'));
+
+        $builder['count'] = 20;
+        $this->assertEquals(30, $reflectionMethod->invoke($builder, 'count'));
+
+        $builder->count = 30;
+        $this->assertEquals(40, $reflectionMethod->invoke($builder, 'count'));
+    }
+
+
+
     private function assertBuildedMessage(Message $message)
     {
         $this->assertEquals(1, $message->getId());
