@@ -9,12 +9,15 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command;
 
+use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
+use RunOpenCode\AbstractBuilder\Helper\Style;
+use RunOpenCode\AbstractBuilder\Helper\Tokenizer;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\Question;
-use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Class GenerateBuilderCommand
@@ -24,12 +27,18 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 class GenerateBuilderCommand extends Command
 {
     /**
-     * @var SymfonyStyle
+     * @var Style
      */
     private $style;
 
+    /**
+     * @var InputInterface
+     */
     private $input;
 
+    /**
+     * @var OutputInterface
+     */
     private $output;
 
     /**
@@ -39,7 +48,10 @@ class GenerateBuilderCommand extends Command
     {
         $this
             ->setName('runopencode:generate:builder')
-            ->setDescription('Generates builder class skeleton for provided class.');
+            ->setDescription('Generates builder class skeleton for provided class.')
+            ->addArgument('class', InputArgument::OPTIONAL, 'Full qualified class name of building object that can be autoloaded, or path to file with class definition.')
+            ->addArgument('builder', InputArgument::OPTIONAL, 'Full qualified class name of builder class can be autoloaded, or it will be autoloaded, or path to file with class definition.')
+            ->addArgument('location', InputArgument::OPTIONAL, 'Path to location of file where builder class will be saved.');
     }
 
     /**
@@ -49,27 +61,23 @@ class GenerateBuilderCommand extends Command
     {
         $this->input = $input;
         $this->output = $output;
-        $this->style = new SymfonyStyle($input, $output);
+        $this->style = new Style($input, $output);
 
-        $this->displayLogo();
+        $this->style->displayLogo();
 
         $this->style->title('Generate builder class');
 
-        if (false === ($class = $this->getClass())) {
+        try {
+            $buildingClass = $this->getBuildingClass();
+            $this->style->info(sprintf('Builder class for class "%s" will be generated.', $buildingClass));
+
+            $builderClass = $this->getBuilderClass(sprintf('%sBuilder', $buildingClass));
+            $this->style->info(sprintf('Full qualified namespace for builder class is "%s".', $builderClass));
+        } catch (\Exception $e) {
+            $this->style->error($e->getMessage());
             return 0;
         }
 
-        $gettersAndSetters = $this->getGettersAndSetters(array_map(function(\ReflectionParameter $parameter) {
-            return $parameter->getName();
-        }, (new \ReflectionClass($class))->getConstructor()->getParameters()));
-
-        if (false === ($builderClass = $this->getBuilderClassName(sprintf('%sBuilder', $class)))) {
-            return 0;
-        }
-
-        if (false === ($location = $this->getBuilderClassLocation((new \ReflectionClass(class_exists($builderClass) ? $builderClass : $class))->getFileName()))) {
-            return 0;
-        }
     }
 
     /**
@@ -77,19 +85,63 @@ class GenerateBuilderCommand extends Command
      *
      * @return string|bool
      */
-    private function getClass()
+    private function getBuildingClass()
     {
-        $helper = $this->getHelper('question');
-        $question = new Question('Enter full qualified class name for which you want to generate builder class: ', null);
+        $class = $this->input->getArgument('class');
 
-        $class = $helper->ask($this->input, $this->output, $question);
+        if (null === $class) {
+            $helper = $this->getHelper('question');
+            $question = new Question('Enter full qualified class name, or path to file with class, for which you want to generate builder class: ', null);
+
+            $class = $helper->ask($this->input, $this->output, $question);
+        }
 
         if (!class_exists($class, true)) {
-            $this->style->error(sprintf('Unable to autoload class "%s". Does this class exists? Can it be autoloaded?', $class));
-            return false;
+            $class = Tokenizer::findClass($class);
+        }
+
+        if (!class_exists($class, true)) {
+            throw new RuntimeException(sprintf('Unable to autoload class "%s". Does this class exists? Can it be autoloaded?', $class));
         }
 
         return ltrim(str_replace('\\\\', '\\', $class), '\\');
+    }
+
+    /**
+     * Get class name for builder class.
+     *
+     * @param string $suggest
+     * @return bool|string
+     */
+    private function getBuilderClass($suggest)
+    {
+        $class = $this->input->getArgument('builder');
+
+        if (null === $class) {
+            $helper = $this->getHelper('question');
+            $question = new Question(sprintf('Enter full qualified class name of your builder class (default: "%s"): ', $suggest), $suggest);
+
+            $class = $helper->ask($this->input, $this->output, $question);
+        }
+
+        if (file_exists($class) && !class_exists($class, true)) {
+            $class = Tokenizer::findClass($class);
+        }
+
+        $class = ltrim(str_replace('\\\\', '\\', $class), '\\');
+
+        if ('' === $class) {
+            throw new RuntimeException('Builder class name must be provided.');
+        }
+
+        foreach (explode('\\', $class) as $part) {
+
+            if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
+                throw new RuntimeException(sprintf('Provided builder class name "%s" is not valid PHP class name.', $class));
+            }
+        }
+
+        return $class;
     }
 
     /**
@@ -127,36 +179,6 @@ class GenerateBuilderCommand extends Command
             );
     }
 
-    /**
-     * Get class name for builder class.
-     *
-     * @param string $suggest
-     * @return bool|string
-     */
-    private function getBuilderClassName($suggest)
-    {
-        $helper = $this->getHelper('question');
-        $question = new Question(sprintf('Enter full qualified class name of your builder class (default: "%s"): ', $suggest), $suggest);
-
-        $class = trim($helper->ask($this->input, $this->output, $question));
-
-        if (!$class) {
-            $this->style->error('You have to provide builder class name.');
-            return false;
-        }
-
-        $class = ltrim(str_replace('\\\\', '\\', $class), '\\');
-
-        foreach (explode('\\', $class) as $part) {
-
-            if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
-                $this->style->error(sprintf('Provided builder class name "%s" is not valid PHP class name.', $class));
-                return false;
-            }
-        }
-
-        return $class;
-    }
 
     /**
      * Get builder class location
@@ -179,21 +201,5 @@ class GenerateBuilderCommand extends Command
         // TODO - check if it si possible to create file at all...?
 
         return $location;
-    }
-
-    /**
-     * Display logo.
-     *
-     * @return void
-     */
-    private function displayLogo()
-    {
-        $resource = fopen(__DIR__.'/../../../../LOGO', 'rb');
-
-        while (($line = fgets($resource)) !== false) {
-            $this->style->write('<fg=green>'.$line.'</>');
-        }
-
-        fclose($resource);
     }
 }
