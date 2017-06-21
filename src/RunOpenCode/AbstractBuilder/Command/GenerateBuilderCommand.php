@@ -78,9 +78,12 @@ class GenerateBuilderCommand extends Command
 
             $filePath = $this->getBuilderLocation($builderClass);
             $this->style->info(sprintf('Path to file where builder class will be saved is "%s".', $filePath));
-            
+
+            file_exists($filePath) ? $this->style->info('Existing builder class will be updated.') : $this->style->info('New builder class will be created.');
+
             $methods = $this->getMethods($buildingClass, $builderClass);
-            $this->style->info(sprintf('Methods to generate are: "%s()".', implode('()", "', $methods)));
+            $this->style->info(sprintf('Methods to generate are: "%s".', implode('", "', $methods)));
+
         } catch (\Exception $e) {
             $this->style->error($e->getMessage());
             return 0;
@@ -216,11 +219,12 @@ class GenerateBuilderCommand extends Command
             $setter = sprintf('set%s', ucfirst($parameter->getName()));
 
             if (!in_array($getter, $builderMethods, true)) {
-                $methods[] = $getter;
+                $methods[] = sprintf('%s()', $getter);
             }
 
             if (!in_array($setter, $builderMethods, true)) {
-                $methods[] = $setter;
+                $type = (null !== $parameter->getType()) ? '\\'.$parameter->getType().' ' : '';
+                $methods[] = sprintf('%s(%s$%s)', $setter, $type, $parameter->getName());
             }
         }
 

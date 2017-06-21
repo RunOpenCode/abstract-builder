@@ -18,6 +18,6 @@ $application = new Application();
 $application
     ->add($command = new GenerateBuilderCommand());
 
-$application->setDefaultCommand($command->getName());
+$application->setDefaultCommand($command->getName(), true);
 
 $application->run();
