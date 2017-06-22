@@ -1,6 +1,6 @@
 <?php
 
-namespace RunOpenCode\AbstractBuilder\Helper;
+namespace RunOpenCode\AbstractBuilder\Command;
 
 use Symfony\Component\Console\Style\SymfonyStyle;
 
@@ -23,7 +23,7 @@ class Style extends SymfonyStyle
      */
     public function displayLogo()
     {
-        $resource = fopen(__DIR__.'/../../../../LOGO', 'rb');
+        $resource = fopen(__DIR__ . '/../../../../LOGO', 'rb');
 
         while (($line = fgets($resource)) !== false) {
             $this->write('<fg=green>'.$line.'</>');
