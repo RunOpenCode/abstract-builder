@@ -13,7 +13,6 @@ use RunOpenCode\AbstractBuilder\Ast\ClassLoader;
 use RunOpenCode\AbstractBuilder\Ast\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
-use RunOpenCode\AbstractBuilder\Helper\Tokenizer;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -88,7 +87,7 @@ class GenerateBuilderCommand extends Command
             /**
              * @var ClassMetadata $builderClass
              */
-            $builderClass = $this->getBuilderClass(sprintf('%sBuilder', $buildingClass->getClass()));
+            $builderClass = $this->getBuilderClass($buildingClass);
             $this->style->info(sprintf('Full qualified namespace for builder class is "%s".', $builderClass->getFqcn()));
             $this->style->info(sprintf('Path to file where builder class will be saved is "%s".', $builderClass->getFilename()));
             class_exists($builderClass->isDefined()) ? $this->style->info('Existing builder class will be updated.') : $this->style->info('New builder class will be created.');
@@ -121,7 +120,17 @@ class GenerateBuilderCommand extends Command
             $class = $helper->ask($this->input, $this->output, $question);
         }
 
-        return $this->loader->load($class);
+        $metadata = $this->loader->load($class);
+
+        if (null === ($constructor = $metadata->getConstructor())) {
+            throw new InvalidArgumentException('Builder class can not be generated for class without constructor.');
+        }
+
+        if (0 === count($constructor->getParameters())) {
+            throw new InvalidArgumentException('Builder class can not be generated for class with constructor without arguments.');
+        }
+
+        return $metadata;
     }
 
     /**
@@ -206,9 +215,6 @@ class GenerateBuilderCommand extends Command
      */
     private function getMethods(ClassMetadata $buildingClass, ClassMetadata $builderClass)
     {
-        $constructorParameters = (new \ReflectionClass($buildingClass))->getConstructor()->getParameters();
-        $builderMethods = class_exists($builderClass, true) ? get_class_methods($builderClass) : [];
-
         $methods = [];
 
         foreach ($constructorParameters as $parameter) {

@@ -54,16 +54,24 @@ class ClassMetadata
     private $abstract;
 
     /**
+     * @var MethodMetadata[]
+     */
+    private $methods;
+
+    /**
      * ClassMetadata constructor.
      *
      * @param array $ast
      * @param string $namespace
      * @param string $class
      * @param null|string $filename
+     * @param bool $final
+     * @param bool $abstract
+     * @param MethodMetadata[] $methods
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      */
-    public function __construct(array $ast, $namespace, $class, $filename = null, $final = false, $abstract = false)
+    public function __construct(array $ast, $namespace, $class, $filename = null, $final = false, $abstract = false, array $methods = [])
     {
         $this->ast = $ast;
         $this->namespace = trim($namespace, '\\');
@@ -71,12 +79,14 @@ class ClassMetadata
         $this->filename = $filename;
         $this->final = $final;
         $this->abstract = $abstract;
+        $this->methods = $methods;
 
-        $this->fqcn = '\\';
+        $this->fqcn = '\\'.$this->class;
 
         if ($this->namespace) {
-            $this->fqcn .= $this->namespace.'\\';
+            $this->fqcn = '\\'.$this->namespace.'\\'.$this->class;
         }
+
 
         foreach (explode('\\', ltrim($this->fqcn, '\\')) as $part) {
 
@@ -143,11 +153,27 @@ class ClassMetadata
     }
 
     /**
+     * @return MethodMetadata[]
+     */
+    public function getMethods()
+    {
+        return $this->methods;
+    }
+
+    /**
      * @return bool
      */
     public function isDefined()
     {
         return class_exists($this->getFqcn(), true);
+    }
+
+    /**
+     * @return MethodMetadata|null
+     */
+    public function getConstructor()
+    {
+        // TODO
     }
 
     /**
@@ -180,7 +206,10 @@ class ClassMetadata
             'ast' => $original->getAst(),
             'namespace' => $original->getNamespace(),
             'class' => $original->getClass(),
-            'filename' => $original->getFilename()
+            'filename' => $original->getFilename(),
+            'final' => $original->isFinal(),
+            'abstract ' => $original->isAbstract(),
+            'methods' => $original->getMethods()
         ];
 
         $data = array_merge($data, $overwrite);

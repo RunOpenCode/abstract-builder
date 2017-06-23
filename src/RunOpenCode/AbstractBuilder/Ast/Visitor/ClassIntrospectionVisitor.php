@@ -12,6 +12,7 @@ namespace RunOpenCode\AbstractBuilder\Ast\Visitor;
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\Node\Stmt;
+use RunOpenCode\AbstractBuilder\Ast\MethodMetadata;
 use RunOpenCode\AbstractBuilder\Exception\NotSupportedException;
 
 /**
@@ -42,6 +43,11 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
     private $abstract;
 
     /**
+     * @var MethodMetadata[]
+     */
+    private $methods;
+
+    /**
      * {@inheritDoc}
      *
      * Cleans up internal state
@@ -54,6 +60,7 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
         $this->class = null;
         $this->final = false;
         $this->abstract = false;
+        $this->methods = [];
     }
 
     /**
@@ -83,8 +90,8 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
             $this->abstract = $node->isAbstract();
         }
 
-        if ($node instanceof Stmt\Property) {
-
+        if ($node instanceof Stmt\ClassMethod) {
+            $this->methods[] = MethodMetadata::fromClassMethod($node);
         }
     }
 
@@ -118,5 +125,13 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
     public function isAbstract()
     {
         return $this->abstract;
+    }
+
+    /**
+     * @return MethodMetadata[]
+     */
+    public function getMethods()
+    {
+        return $this->methods;
     }
 }
