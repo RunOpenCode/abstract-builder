@@ -59,9 +59,14 @@ class ClassMetadata
     private $methods;
 
     /**
+     * @var ClassMetadata
+     */
+    private $parent;
+
+    /**
      * ClassMetadata constructor.
      *
-     * @param array $ast
+     * @param $ast
      * @param string $namespace
      * @param string $class
      * @param null|string $filename
@@ -71,7 +76,7 @@ class ClassMetadata
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      */
-    public function __construct(array $ast, $namespace, $class, $filename = null, $final = false, $abstract = false, array $methods = [])
+    public function __construct($ast, $namespace, $class, $filename = null, $final = false, $abstract = false, array $methods = [], ClassMetadata $parent = null)
     {
         $this->ast = $ast;
         $this->namespace = trim($namespace, '\\');
@@ -80,6 +85,7 @@ class ClassMetadata
         $this->final = $final;
         $this->abstract = $abstract;
         $this->methods = $methods;
+        $this->parent = $parent;
 
         $this->fqcn = '\\'.$this->class;
 
@@ -97,7 +103,7 @@ class ClassMetadata
     }
 
     /**
-     * @return array
+     * @return
      */
     public function getAst()
     {
@@ -161,19 +167,80 @@ class ClassMetadata
     }
 
     /**
+     * @return MethodMetadata|null
+     */
+    public function getConstructor()
+    {
+        foreach ($this->methods as $method) {
+
+            if ('__construct' === $method->getName()) {
+                return $method;
+            }
+        }
+
+        if (null !== $this->parent) {
+            return $this->parent->getConstructor();
+        }
+
+        return null;
+    }
+
+    /**
+     * Check if class inherits some other class.
+     *
      * @return bool
      */
-    public function isDefined()
+    public function hasParent()
+    {
+        return null !== $this->parent;
+    }
+
+    /**
+     * @return ClassMetadata|null
+     */
+    public function getParent()
+    {
+        return $this->parent;
+    }
+
+    /**
+     * Check if class has public method, with optional tree traverse.
+     *
+     * @param string $name
+     * @param bool $traverse
+     *
+     * @return bool
+     */
+    public function hasPublicMethod($name, $traverse = true)
+    {
+        foreach ($this->methods as $method) {
+
+            if ($method->isPublic() && $name === $method->getName()) {
+                return true;
+            }
+        }
+
+        if ($traverse && $this->hasParent()) {
+            return $this->getParent()->hasPublicMethod($name, $traverse);
+        }
+
+        return false;
+    }
+
+    /**
+     * @return bool
+     */
+    public function isAutoloadable()
     {
         return class_exists($this->getFqcn(), true);
     }
 
     /**
-     * @return MethodMetadata|null
+     * {@inheritdoc}
      */
-    public function getConstructor()
+    public function __toString()
     {
-        // TODO
+        return $this->getFqcn();
     }
 
     /**
@@ -209,7 +276,8 @@ class ClassMetadata
             'filename' => $original->getFilename(),
             'final' => $original->isFinal(),
             'abstract ' => $original->isAbstract(),
-            'methods' => $original->getMethods()
+            'methods' => $original->getMethods(),
+            'parent' => $original->getParent()
         ];
 
         $data = array_merge($data, $overwrite);

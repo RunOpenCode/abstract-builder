@@ -23,6 +23,16 @@ use RunOpenCode\AbstractBuilder\Exception\NotSupportedException;
 class ClassIntrospectionVisitor extends NodeVisitorAbstract
 {
     /**
+     * @var array
+     */
+    private $classes;
+
+    /**
+     * @var array
+     */
+    private $ast;
+
+    /**
      * @var string
      */
     private $namespace;
@@ -48,6 +58,11 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
     private $methods;
 
     /**
+     * @var string|null
+     */
+    private $parent;
+
+    /**
      * {@inheritDoc}
      *
      * Cleans up internal state
@@ -56,11 +71,15 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
      */
     public function beforeTraverse(array $nodes)
     {
+        $this->classes = [];
+
+        $this->ast = null;
         $this->namespace = null;
         $this->class = null;
         $this->final = false;
         $this->abstract = false;
         $this->methods = [];
+        $this->parent = null;
     }
 
     /**
@@ -79,59 +98,58 @@ class ClassIntrospectionVisitor extends NodeVisitorAbstract
             $this->namespace = $node->name->toString();
         }
 
-        if ($node instanceof Stmt\Class_) {
+        if ($node instanceof Stmt\Class_ && !$node->isAnonymous()) {
 
             if (null !== $this->class) {
-                throw new NotSupportedException(sprintf('Multiple namespaces in single file are not supported.'));
+                throw new NotSupportedException(sprintf('Multiple classes in single file are not supported.'));
             }
 
+            $this->ast = $node;
             $this->class = $node->name;
             $this->final = $node->isFinal();
             $this->abstract = $node->isAbstract();
+
+            if (null !== $node->extends) {
+                $this->parent = $node->extends->toString();
+            }
         }
 
-        if ($node instanceof Stmt\ClassMethod) {
+        if (null !== $this->class && $node instanceof Stmt\ClassMethod) {
             $this->methods[] = MethodMetadata::fromClassMethod($node);
         }
     }
 
     /**
-     * @return string
+     * {@inheritdoc}
      */
-    public function getNamespace()
+    public function leaveNode(Node $node)
     {
-        return $this->namespace;
+        if ($node instanceof Stmt\Class_) {
+
+            $this->classes[] = [
+                'ast' => $this->ast,
+                'namespace' => $this->namespace,
+                'class' => $this->class,
+                'fqcn' => $this->namespace.'\\'.$this->class,
+                'final' => $this->final,
+                'abstract' => $this->abstract,
+                'methods' => $this->methods,
+                'parent' => $this->parent
+            ];
+
+            $this->class = null;
+            $this->final = false;
+            $this->abstract = false;
+            $this->methods = [];
+            $this->parent = null;
+        }
     }
 
     /**
-     * @return string
+     * @return array
      */
-    public function getClass()
+    public function getClasses()
     {
-        return $this->class;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isFinal()
-    {
-        return $this->final;
-    }
-
-    /**
-     * @return bool
-     */
-    public function isAbstract()
-    {
-        return $this->abstract;
-    }
-
-    /**
-     * @return MethodMetadata[]
-     */
-    public function getMethods()
-    {
-        return $this->methods;
+        return $this->classes;
     }
 }
