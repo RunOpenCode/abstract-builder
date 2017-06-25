@@ -66,7 +66,7 @@ class ClassMetadata
     /**
      * ClassMetadata constructor.
      *
-     * @param $ast
+     * @param array $ast
      * @param string $namespace
      * @param string $class
      * @param null|string $filename
@@ -103,7 +103,7 @@ class ClassMetadata
     }
 
     /**
-     * @return
+     * @return array
      */
     public function getAst()
     {
@@ -256,7 +256,7 @@ class ClassMetadata
         $class = array_pop($parts);
         $namespace = implode('\\', $parts);
 
-        return new static([], $namespace, $class);
+        return new static(null, $namespace, $class);
     }
 
     /**

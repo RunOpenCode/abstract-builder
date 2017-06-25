@@ -9,6 +9,7 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command;
 
+use RunOpenCode\AbstractBuilder\Ast\ClassBuilder;
 use RunOpenCode\AbstractBuilder\Ast\ClassLoader;
 use RunOpenCode\AbstractBuilder\Ast\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Ast\MethodMetadata;
@@ -96,6 +97,10 @@ class GenerateBuilderCommand extends Command
 
             $methods = $this->getMethods($buildingClass, $builderClass);
             $this->style->info(sprintf('Methods to generate are: "%s".', implode('", "', $methods)));
+
+            $builder = ClassBuilder::create($buildingClass, $builderClass, array_map(function(MethodChoice $choice) { return $choice->getMethod(); }, $methods));
+
+            $this->style->write($builder->display());
 
         } catch (\Exception $e) {
             $this->style->error($e->getMessage());
@@ -211,7 +216,7 @@ class GenerateBuilderCommand extends Command
      * @param ClassMetadata $buildingClass
      * @param ClassMetadata $builderClass
      *
-     * @return array
+     * @return MethodChoice[]
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      */
