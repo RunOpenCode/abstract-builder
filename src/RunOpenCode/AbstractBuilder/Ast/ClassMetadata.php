@@ -9,7 +9,10 @@
  */
 namespace RunOpenCode\AbstractBuilder\Ast;
 
+use PhpParser\Node\Stmt\Class_;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
+use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
+use RunOpenCode\AbstractBuilder\Utils\ClassUtils;
 
 /**
  * Class ClassMetadata
@@ -18,11 +21,6 @@ use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
  */
 class ClassMetadata
 {
-    /**
-     * @var array
-     */
-    private $ast;
-
     /**
      * @var string
      */
@@ -39,9 +37,14 @@ class ClassMetadata
     private $fqcn;
 
     /**
-     * @var string
+     * @var ClassMetadata
      */
-    private $filename;
+    private $parent;
+
+    /**
+     * @var TraitMetadata[]
+     */
+    private $traits;
 
     /**
      * @var bool
@@ -59,33 +62,31 @@ class ClassMetadata
     private $methods;
 
     /**
-     * @var ClassMetadata
+     * @var string
      */
-    private $parent;
+    private $filename;
+
+    /**
+     * @var Class_
+     */
+    private $ast;
 
     /**
      * ClassMetadata constructor.
      *
-     * @param array $ast
      * @param string $namespace
      * @param string $class
-     * @param null|string $filename
+     * @param ClassMetadata|null $parent
      * @param bool $final
      * @param bool $abstract
      * @param MethodMetadata[] $methods
-     *
-     * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
+     * @param string|null $filename
+     * @param Class_ $ast
      */
-    public function __construct($ast, $namespace, $class, $filename = null, $final = false, $abstract = false, array $methods = [], ClassMetadata $parent = null)
+    public function __construct($namespace, $class, ClassMetadata $parent = null, array $traits = [], $final = false, $abstract = false, array $methods = [], $filename = null, Class_ $ast = null)
     {
-        $this->ast = $ast;
         $this->namespace = trim($namespace, '\\');
         $this->class = trim($class, '\\');
-        $this->filename = $filename;
-        $this->final = $final;
-        $this->abstract = $abstract;
-        $this->methods = $methods;
-        $this->parent = $parent;
 
         $this->fqcn = '\\'.$this->class;
 
@@ -93,21 +94,17 @@ class ClassMetadata
             $this->fqcn = '\\'.$this->namespace.'\\'.$this->class;
         }
 
-
-        foreach (explode('\\', ltrim($this->fqcn, '\\')) as $part) {
-
-            if (!preg_match('/^[a-zA-Z_\x7f-\xff][a-zA-Z0-9_\x7f-\xff]*$/', $part)) {
-                throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP class name.', $this->fqcn));
-            }
+        if (ClassUtils::isClassNameValid($this->fqcn)) {
+            throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP class name.', $this->fqcn));
         }
-    }
 
-    /**
-     * @return array
-     */
-    public function getAst()
-    {
-        return $this->ast;
+        $this->parent = $parent;
+        $this->traits = $traits;
+        $this->final = $final;
+        $this->abstract = $abstract;
+        $this->methods = $methods;
+        $this->filename = $filename;
+        $this->ast = $ast;
     }
 
     /**
@@ -135,11 +132,45 @@ class ClassMetadata
     }
 
     /**
-     * @return string
+     * @return bool
      */
-    public function getFilename()
+    public function isAutoloadable()
     {
-        return $this->filename;
+        return class_exists($this->getFqcn(), true);
+    }
+
+    /**
+     * Check if class inherits some other class.
+     *
+     * @return bool
+     */
+    public function hasParent()
+    {
+        return null !== $this->parent;
+    }
+
+    /**
+     * @return ClassMetadata|null
+     */
+    public function getParent()
+    {
+        return $this->parent;
+    }
+
+    /**
+     * @return bool
+     */
+    public function hasTraits()
+    {
+        return count($this->traits) > 0;
+    }
+
+    /**
+     * @return TraitMetadata[]
+     */
+    public function getTraits()
+    {
+        return $this->traits;
     }
 
     /**
@@ -167,44 +198,7 @@ class ClassMetadata
     }
 
     /**
-     * @return MethodMetadata|null
-     */
-    public function getConstructor()
-    {
-        foreach ($this->methods as $method) {
-
-            if ('__construct' === $method->getName()) {
-                return $method;
-            }
-        }
-
-        if (null !== $this->parent) {
-            return $this->parent->getConstructor();
-        }
-
-        return null;
-    }
-
-    /**
-     * Check if class inherits some other class.
-     *
-     * @return bool
-     */
-    public function hasParent()
-    {
-        return null !== $this->parent;
-    }
-
-    /**
-     * @return ClassMetadata|null
-     */
-    public function getParent()
-    {
-        return $this->parent;
-    }
-
-    /**
-     * Check if class has public method, with optional tree traverse.
+     * Check if class has public method, with optional inheritance tree and trait traverse.
      *
      * @param string $name
      * @param bool $traverse
@@ -215,8 +209,21 @@ class ClassMetadata
     {
         foreach ($this->methods as $method) {
 
-            if ($method->isPublic() && $name === $method->getName()) {
-                return true;
+            if ($name === $method->getName()) {
+                return $method->isPublic();
+            }
+        }
+
+        if ($traverse && $this->hasTraits()) {
+
+            /**
+             * @var TraitMetadata $trait
+             */
+            foreach ($this->traits as $trait) {
+
+                if ($trait->hasPublicMethod($name, $traverse)) {
+                    return true;
+                }
             }
         }
 
@@ -228,11 +235,63 @@ class ClassMetadata
     }
 
     /**
-     * @return bool
+     * Get public method for class, with optional inheritance tree and trait traverse.
+     *
+     * @param string $name
+     * @param bool $traverse
+     *
+     * @return MethodMetadata
+     *
+     * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      */
-    public function isAutoloadable()
+    public function getPublicMethod($name, $traverse = true)
     {
-        return class_exists($this->getFqcn(), true);
+        foreach ($this->methods as $method) {
+
+            if ($name === $method->getName()) {
+
+                if ($method->isPublic()) {
+                    return $method;
+                }
+
+                throw new RuntimeException(sprintf('Method "%s()" for class "%s" exists, but it is not public.', $name, $this->fqcn));
+            }
+        }
+
+        if ($traverse && $this->hasTraits()) {
+
+            /**
+             * @var TraitMetadata $trait
+             */
+            foreach ($this->traits as $trait) {
+
+                if ($trait->hasPublicMethod($name, $traverse)) {
+                    return $trait->getPublicMethod($name, $traverse);
+                }
+            }
+        }
+
+        if ($traverse && $this->hasParent() && $this->getParent()->hasPublicMethod($name, $traverse)) {
+            return $this->getParent()->getPublicMethod($name, $traverse);
+        }
+
+        throw new RuntimeException(sprintf('Method "%s()" for class "%s" does not exists.', $name, $this->fqcn));
+    }
+
+    /**
+     * @return string
+     */
+    public function getFilename()
+    {
+        return $this->filename;
+    }
+
+    /**
+     * @return Class_
+     */
+    public function getAst()
+    {
+        return $this->ast;
     }
 
     /**
@@ -256,7 +315,7 @@ class ClassMetadata
         $class = array_pop($parts);
         $namespace = implode('\\', $parts);
 
-        return new static(null, $namespace, $class);
+        return new static($namespace, $class);
     }
 
     /**
@@ -270,14 +329,14 @@ class ClassMetadata
     public static function clone(ClassMetadata $original, array $overwrite = [])
     {
         $data = [
-            'ast' => $original->getAst(),
             'namespace' => $original->getNamespace(),
             'class' => $original->getClass(),
-            'filename' => $original->getFilename(),
+            'parent' => $original->getParent(),
             'final' => $original->isFinal(),
             'abstract ' => $original->isAbstract(),
             'methods' => $original->getMethods(),
-            'parent' => $original->getParent()
+            'filename' => $original->getFilename(),
+            'ast' => $original->getAst(),
         ];
 
         $data = array_merge($data, $overwrite);
