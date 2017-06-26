@@ -120,6 +120,21 @@ class ClassBuilder
                 ->method($method->getName())
                 ->makePublic();
 
+            if ($method->getReturnType()) {
+                $methodFactory->setReturnType($method->getReturnType() instanceof ClassMetadata ? (string) $method->getReturnType() : $method->getReturnType());
+            }
+
+            foreach ($method->getParameters() as $parameter) {
+                $parameterFactory = $this->factory
+                    ->param($parameter->getName());
+
+                if ($parameter->getType()) {
+                    $parameterFactory->setTypeHint($parameter->getType());
+                }
+
+                $methodFactory->addParam($parameterFactory->getNode());
+            }
+
             $this->classNode->addStmt($methodFactory->getNode());
         }
 

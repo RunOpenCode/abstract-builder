@@ -12,7 +12,10 @@ namespace RunOpenCode\AbstractBuilder\Command;
 use RunOpenCode\AbstractBuilder\Ast\ClassBuilder;
 use RunOpenCode\AbstractBuilder\Ast\ClassLoader;
 use RunOpenCode\AbstractBuilder\Ast\ClassMetadata;
-use RunOpenCode\AbstractBuilder\Ast\MethodMetadata;
+use RunOpenCode\AbstractBuilder\Command\Question\GetterMethodChoice;
+use RunOpenCode\AbstractBuilder\Command\Question\MethodChoice;
+use RunOpenCode\AbstractBuilder\Command\Question\SetterMethodChoice;
+use RunOpenCode\AbstractBuilder\Command\Style\RunOpenCodeStyle;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
 use Symfony\Component\Console\Command\Command;
@@ -31,7 +34,7 @@ use Symfony\Component\Console\Question\Question;
 class GenerateBuilderCommand extends Command
 {
     /**
-     * @var Style
+     * @var RunOpenCodeStyle
      */
     private $style;
 
@@ -74,7 +77,7 @@ class GenerateBuilderCommand extends Command
     {
         $this->input = $input;
         $this->output = $output;
-        $this->style = new Style($input, $output);
+        $this->style = new RunOpenCodeStyle($input, $output);
 
         $this->style->displayLogo();
 
@@ -95,8 +98,9 @@ class GenerateBuilderCommand extends Command
             $this->style->info(sprintf('Path to file where builder class will be saved is "%s".', $builderClass->getFilename()));
             $builderClass->isAutoloadable() ? $this->style->info('Existing builder class will be updated.') : $this->style->info('New builder class will be created.');
 
-            $methods = $this->getMethods($buildingClass, $builderClass);
-            $this->style->info(sprintf('Methods to generate are: "%s".', implode('", "', $methods)));
+            $methods = $this->getMethodsToGenerate($buildingClass, $builderClass);
+            $this->style->info('Methods to generate are:');
+            $this->style->ul($methods);
 
             $builder = ClassBuilder::create($buildingClass, $builderClass, array_map(function(MethodChoice $choice) { return $choice->getMethod(); }, $methods));
 
@@ -220,29 +224,24 @@ class GenerateBuilderCommand extends Command
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      */
-    private function getMethods(ClassMetadata $buildingClass, ClassMetadata $builderClass)
+    private function getMethodsToGenerate(ClassMetadata $buildingClass, ClassMetadata $builderClass)
     {
         $methods = [];
 
         $parameters = $buildingClass->getConstructor()->getParameters();
 
         foreach ($parameters as $parameter) {
-            $getter = sprintf('get%s', ucfirst($parameter->getName()));
-            $setter = sprintf('set%s', ucfirst($parameter->getName()));
+            $getter = new GetterMethodChoice($parameter);
+            $setter = new SetterMethodChoice($parameter);
 
-            if (!$builderClass->hasPublicMethod($getter)) {
-                $methods[] = new MethodMetadata($getter, false, false, MethodMetadata::PUBLIC, $parameter->getType(), false, false, []);
+            if (!$builderClass->hasPublicMethod($getter->getMethodName())) {
+                $methods[] = $getter;
             }
 
-            if (!$builderClass->hasPublicMethod($setter)) {
-                $methods[] = new MethodMetadata($setter, false, false, MethodMetadata::PUBLIC, $builderClass, false, false, [$parameter]);;
+            if (!$builderClass->hasPublicMethod($setter->getMethodName())) {
+                $methods[] = $setter;
             }
         }
-
-        $methods = array_map(function(MethodMetadata $method) {
-            return new MethodChoice($method);
-        }, $methods);
-
 
         if (true !== $this->input->getOption('all')) {
 

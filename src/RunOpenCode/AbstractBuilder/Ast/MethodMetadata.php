@@ -132,6 +132,14 @@ class MethodMetadata
     }
 
     /**
+     * @return bool
+     */
+    public function hasParameters()
+    {
+        return count($this->parameters) > 0;
+    }
+
+    /**
      * @return ParameterMetadata[]
      */
     public function getParameters()
