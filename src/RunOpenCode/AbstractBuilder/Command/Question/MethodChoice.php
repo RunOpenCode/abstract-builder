@@ -9,7 +9,7 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command\Question;
 
-use RunOpenCode\AbstractBuilder\Ast\ParameterMetadata;
+use RunOpenCode\AbstractBuilder\Ast\Metadata\ParameterMetadata;
 
 /**
  * Class MethodChoice

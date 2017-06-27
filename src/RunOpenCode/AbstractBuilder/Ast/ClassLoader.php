@@ -12,6 +12,7 @@ namespace RunOpenCode\AbstractBuilder\Ast;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
+use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Ast\Visitor\ClassIntrospectionVisitor;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
 

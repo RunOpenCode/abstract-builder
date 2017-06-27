@@ -9,9 +9,8 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command;
 
-use RunOpenCode\AbstractBuilder\Ast\ClassBuilder;
 use RunOpenCode\AbstractBuilder\Ast\ClassLoader;
-use RunOpenCode\AbstractBuilder\Ast\ClassMetadata;
+use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Command\Question\GetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\MethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\SetterMethodChoice;
@@ -102,10 +101,6 @@ class GenerateBuilderCommand extends Command
             $this->style->info('Methods to generate are:');
             $this->style->ul($methods);
 
-            $builder = ClassBuilder::create($buildingClass, $builderClass, array_map(function(MethodChoice $choice) { return $choice->getMethod(); }, $methods));
-
-            $this->style->write($builder->display());
-
         } catch (\Exception $e) {
             $this->style->error($e->getMessage());
             return 0;
@@ -131,9 +126,10 @@ class GenerateBuilderCommand extends Command
             $class = $helper->ask($this->input, $this->output, $question);
         }
 
+
         $metadata = $this->loader->load($class);
 
-        if (null === ($constructor = $metadata->getConstructor())) {
+        if (null === ($constructor = $metadata->getPublicMethod('__construct'))) {
             throw new InvalidArgumentException('Builder class can not be generated for class without constructor.');
         }
 
@@ -228,7 +224,7 @@ class GenerateBuilderCommand extends Command
     {
         $methods = [];
 
-        $parameters = $buildingClass->getConstructor()->getParameters();
+        $parameters = $buildingClass->getPublicMethod('__construct')->getParameters();
 
         foreach ($parameters as $parameter) {
             $getter = new GetterMethodChoice($parameter);

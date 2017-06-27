@@ -12,7 +12,7 @@ namespace RunOpenCode\AbstractBuilder\Ast\Visitor;
 use PhpParser\Node;
 use PhpParser\NodeVisitorAbstract;
 use PhpParser\Node\Stmt;
-use RunOpenCode\AbstractBuilder\Ast\MethodMetadata;
+use RunOpenCode\AbstractBuilder\Ast\Metadata\MethodMetadata;
 use RunOpenCode\AbstractBuilder\Exception\NotSupportedException;
 
 /**

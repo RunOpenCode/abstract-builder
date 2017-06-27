@@ -1,10 +1,22 @@
 <?php
-
-namespace RunOpenCode\AbstractBuilder\Ast;
+/*
+ * This file is part of the Abstract builder package, an RunOpenCode project.
+ *
+ * (c) 2017 RunOpenCode
+ *
+ * For the full copyright and license information, please view the LICENSE
+ * file that was distributed with this source code.
+ */
+namespace RunOpenCode\AbstractBuilder\Ast\Metadata;
 
 use PhpParser\Node\Param;
 use PhpParser\Node\Stmt\ClassMethod;
 
+/**
+ * Class MethodMetadata
+ *
+ * @package RunOpenCode\AbstractBuilder\Ast\Metadata
+ */
 class MethodMetadata
 {
     const PRIVATE = 'private';
@@ -63,7 +75,7 @@ class MethodMetadata
      * @param bool $static
      * @param ParameterMetadata[] $parameters
      */
-    public function __construct($name, $abstract, $final, $visibility, $returnType, $byRef, $static, array $parameters)
+    public function __construct($name, $abstract = false, $final = false, $visibility = self::PUBLIC, $returnType = null, $byRef = false, $static = false, array $parameters)
     {
         $this->name = $name;
         $this->abstract = $abstract;

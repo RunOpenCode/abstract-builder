@@ -7,13 +7,18 @@
  * For the full copyright and license information, please view the LICENSE
  * file that was distributed with this source code.
  */
-namespace RunOpenCode\AbstractBuilder\Ast;
+namespace RunOpenCode\AbstractBuilder\Ast\Metadata;
 
 use PhpParser\Node\Stmt\Trait_;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
 use RunOpenCode\AbstractBuilder\Utils\ClassUtils;
 
+/**
+ * Class TraitMetadata
+ *
+ * @package RunOpenCode\AbstractBuilder\Ast\Metadata
+ */
 class TraitMetadata
 {
     /**
