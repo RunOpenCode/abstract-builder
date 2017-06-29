@@ -9,8 +9,8 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command;
 
-use RunOpenCode\AbstractBuilder\Ast\ClassLoader;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
+use RunOpenCode\AbstractBuilder\Ast\MetadataLoader;
 use RunOpenCode\AbstractBuilder\Command\Question\GetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\MethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\SetterMethodChoice;
@@ -48,7 +48,7 @@ class GenerateBuilderCommand extends Command
     private $output;
 
     /**
-     * @var ClassLoader
+     * @var MetadataLoader
      */
     private $loader;
 
@@ -66,7 +66,7 @@ class GenerateBuilderCommand extends Command
             ->addOption('all', '-a', InputOption::VALUE_NONE, 'Generate all methods by default.')
             ->addOption('withReturnTypes', '-r', InputOption::VALUE_NONE, 'Generate methods with return types declarations.');
 
-        $this->loader = new ClassLoader();
+        $this->loader = new MetadataLoader();
     }
 
     /**
@@ -126,8 +126,11 @@ class GenerateBuilderCommand extends Command
             $class = $helper->ask($this->input, $this->output, $question);
         }
 
-
         $metadata = $this->loader->load($class);
+
+
+
+        var_dump($metadata->getClasses()['RunOpenCode\AbstractBuilder\Tests\Fixtures\Message']->getTraits());exit;
 
         if (null === ($constructor = $metadata->getPublicMethod('__construct'))) {
             throw new InvalidArgumentException('Builder class can not be generated for class without constructor.');

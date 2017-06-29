@@ -9,13 +9,19 @@
  */
 namespace RunOpenCode\AbstractBuilder\Tests\Fixtures;
 
+use Psr\Log\LoggerAwareTrait;
+
 /**
  * Class Message
  *
  * @package RunOpenCode\AbstractBuilder\Test\Fixtures
  */
-class Message
+class Message extends Dummy
 {
+    use LoggerAwareTrait {
+        setLogger as private privateSetLogger;
+    }
+
     /**
      * @var int
      */

@@ -24,17 +24,7 @@ class ClassMetadata
     /**
      * @var string
      */
-    private $namespace;
-
-    /**
-     * @var string
-     */
-    private $class;
-
-    /**
-     * @var string
-     */
-    private $fqcn;
+    private $name;
 
     /**
      * @var ClassMetadata
@@ -62,11 +52,6 @@ class ClassMetadata
     private $methods;
 
     /**
-     * @var string
-     */
-    private $filename;
-
-    /**
      * @var Class_
      */
     private $ast;
@@ -74,28 +59,19 @@ class ClassMetadata
     /**
      * ClassMetadata constructor.
      *
-     * @param string $namespace
-     * @param string $class
+     * @param string $name
      * @param ClassMetadata|null $parent
      * @param bool $final
      * @param bool $abstract
      * @param MethodMetadata[] $methods
-     * @param string|null $filename
      * @param Class_ $ast
      */
-    public function __construct($namespace, $class, ClassMetadata $parent = null, array $traits = [], $final = false, $abstract = false, array $methods = [], $filename = null, Class_ $ast = null)
+    public function __construct($name, ClassMetadata $parent = null, array $traits = [], $final = false, $abstract = false, array $methods = [], Class_ $ast = null)
     {
-        $this->namespace = trim($namespace, '\\');
-        $this->class = trim($class, '\\');
+        $this->name = trim($name, '\\');
 
-        $this->fqcn = '\\'.$this->class;
-
-        if ($this->namespace) {
-            $this->fqcn = '\\'.$this->namespace.'\\'.$this->class;
-        }
-
-        if (ClassUtils::isClassNameValid($this->fqcn)) {
-            throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP class name.', $this->fqcn));
+        if (!ClassUtils::isClassNameValid($this->name)) {
+            throw new InvalidArgumentException(sprintf('Provided class name "%s" is not valid PHP class name.', $this->name));
         }
 
         $this->parent = $parent;
@@ -103,32 +79,15 @@ class ClassMetadata
         $this->final = $final;
         $this->abstract = $abstract;
         $this->methods = $methods;
-        $this->filename = $filename;
         $this->ast = $ast;
     }
 
     /**
      * @return string
      */
-    public function getNamespace()
+    public function getName()
     {
-        return $this->namespace;
-    }
-
-    /**
-     * @return string
-     */
-    public function getClass()
-    {
-        return $this->class;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFqcn()
-    {
-        return $this->fqcn;
+        return $this->name;
     }
 
     /**
@@ -136,7 +95,7 @@ class ClassMetadata
      */
     public function isAutoloadable()
     {
-        return class_exists($this->getFqcn(), true);
+        return class_exists($this->getName(), true);
     }
 
     /**
@@ -198,6 +157,44 @@ class ClassMetadata
     }
 
     /**
+     * Check if class has method, with optional inheritance tree and trait traverse.
+     *
+     * @param string $name
+     * @param bool $traverse
+     *
+     * @return bool
+     */
+    public function hasMethod($name, $traverse = true)
+    {
+        foreach ($this->methods as $method) {
+
+            if ($name === $method->getName()) {
+                return true;
+            }
+        }
+
+        if ($traverse && $this->hasTraits()) {
+
+            /**
+             * @var TraitMetadata $trait
+             */
+            foreach ($this->traits as $trait) {
+
+                if ($trait->hasMethod($name, $traverse)) {
+                    return true;
+                }
+            }
+        }
+
+
+        if ($traverse && $this->hasParent()) {
+            return $this->getParent()->hasMethod($name, $traverse);
+        }
+
+        return false;
+    }
+
+    /**
      * Check if class has public method, with optional inheritance tree and trait traverse.
      *
      * @param string $name
@@ -254,7 +251,7 @@ class ClassMetadata
                     return $method;
                 }
 
-                throw new RuntimeException(sprintf('Method "%s()" for class "%s" exists, but it is not public.', $name, $this->fqcn));
+                throw new RuntimeException(sprintf('Method "%s()" for class "%s" exists, but it is not public.', $name, $this->name));
             }
         }
 
@@ -275,15 +272,7 @@ class ClassMetadata
             return $this->getParent()->getPublicMethod($name, $traverse);
         }
 
-        throw new RuntimeException(sprintf('Method "%s()" for class "%s" does not exists.', $name, $this->fqcn));
-    }
-
-    /**
-     * @return string
-     */
-    public function getFilename()
-    {
-        return $this->filename;
+        throw new RuntimeException(sprintf('Method "%s()" for class "%s" does not exists.', $name, $this->name));
     }
 
     /**
@@ -299,23 +288,19 @@ class ClassMetadata
      */
     public function __toString()
     {
-        return $this->getFqcn();
+        return $this->getName();
     }
 
     /**
      * Initialize new, non-existing class.
      *
-     * @param string $fqcn
+     * @param string $name
      *
      * @return ClassMetadata|static $this
      */
-    public static function create($fqcn)
+    public static function create($name)
     {
-        $parts = explode('\\', trim($fqcn, '\\'));
-        $class = array_pop($parts);
-        $namespace = implode('\\', $parts);
-
-        return new static($namespace, $class);
+        return new static($name);
     }
 
     /**
@@ -329,13 +314,12 @@ class ClassMetadata
     public static function clone(ClassMetadata $original, array $overwrite = [])
     {
         $data = [
-            'namespace' => $original->getNamespace(),
-            'class' => $original->getClass(),
+            'name' => $original->getName(),
             'parent' => $original->getParent(),
+            'traits' => $original->getTraits(),
             'final' => $original->isFinal(),
             'abstract ' => $original->isAbstract(),
             'methods' => $original->getMethods(),
-            'filename' => $original->getFilename(),
             'ast' => $original->getAst(),
         ];
 

@@ -24,17 +24,7 @@ class TraitMetadata
     /**
      * @var string
      */
-    private $namespace;
-
-    /**
-     * @var string
-     */
     private $name;
-
-    /**
-     * @var string
-     */
-    private $fqcn;
 
     /**
      * @var TraitMetadata[]
@@ -47,42 +37,21 @@ class TraitMetadata
     private $methods;
 
     /**
-     * @var string
-     */
-    private $filename;
-
-    /**
      * @var Trait_
      */
     private $ast;
 
-    public function __construct($namespace, $name, array $traits = [], array $methods = [], $filename = null, Trait_ $ast = null)
+    public function __construct($name, array $traits = [], array $methods = [], Trait_ $ast = null)
     {
-        $this->namespace = $namespace;
         $this->name = $name;
 
-        $this->fqcn = '\\'.$this->name;
-
-        if ($this->namespace) {
-            $this->fqcn = '\\'.$this->namespace.'\\'.$this->name;
-        }
-
-        if (ClassUtils::isClassNameValid($this->fqcn)) {
+        if (!ClassUtils::isClassNameValid($this->name)) {
             throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP trait name.', $this->fqcn));
         }
 
         $this->traits = $traits;
         $this->methods = $methods;
-        $this->filename = $filename;
         $this->ast = $ast;
-    }
-
-    /**
-     * @return string
-     */
-    public function getNamespace()
-    {
-        return $this->namespace;
     }
 
     /**
@@ -91,14 +60,6 @@ class TraitMetadata
     public function getName()
     {
         return $this->name;
-    }
-
-    /**
-     * @return string
-     */
-    public function getFqcn()
-    {
-        return $this->fqcn;
     }
 
     /**
@@ -123,6 +84,39 @@ class TraitMetadata
     public function getMethods()
     {
         return $this->methods;
+    }
+
+    /**
+     * Check if trait has method, with optional trait traverse.
+     *
+     * @param string $name
+     * @param bool $traverse
+     *
+     * @return bool
+     */
+    public function hasMethod($name, $traverse = true)
+    {
+        foreach ($this->methods as $method) {
+
+            if ($name === $method->getName()) {
+                return true;
+            }
+        }
+
+        if ($traverse && $this->hasTraits()) {
+
+            /**
+             * @var TraitMetadata $trait
+             */
+            foreach ($this->traits as $trait) {
+
+                if ($trait->hasMethod($name, $traverse)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -178,7 +172,7 @@ class TraitMetadata
                     return $method;
                 }
 
-                throw new RuntimeException(sprintf('Method "%s()" for trait "%s" exists, but it is not public.', $name, $this->fqcn));
+                throw new RuntimeException(sprintf('Method "%s()" for trait "%s" exists, but it is not public.', $name, $this->name));
             }
         }
 
@@ -195,15 +189,7 @@ class TraitMetadata
             }
         }
 
-        throw new RuntimeException(sprintf('Method "%s()" for trait "%s" does not exists.', $name, $this->fqcn));
-    }
-
-    /**
-     * @return string
-     */
-    public function getFilename()
-    {
-        return $this->filename;
+        throw new RuntimeException(sprintf('Method "%s()" for trait "%s" does not exists.', $name, $this->name));
     }
 
     /**
@@ -214,12 +200,11 @@ class TraitMetadata
         return $this->ast;
     }
 
-
     /**
      * {@inheritdoc}
      */
     public function __toString()
     {
-        return $this->getFqcn();
+        return $this->getName();
     }
 }

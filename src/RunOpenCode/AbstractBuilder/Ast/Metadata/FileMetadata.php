@@ -75,6 +75,28 @@ class FileMetadata
     }
 
     /**
+     * Check if class is defined within file.
+     *
+     * @param string $name
+     * @return bool
+     */
+    public function hasClass($name)
+    {
+        return isset($this->classes[trim($name, '\\')]);
+    }
+
+    /**
+     * Get class definition from file.
+     *
+     * @param string $name
+     * @return ClassMetadata
+     */
+    public function getClass($name)
+    {
+        return $this->classes[trim($name, '\\')];
+    }
+
+    /**
      * @return ClassMetadata[]
      */
     public function getClasses()

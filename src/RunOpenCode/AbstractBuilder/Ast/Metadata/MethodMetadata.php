@@ -10,7 +10,8 @@
 namespace RunOpenCode\AbstractBuilder\Ast\Metadata;
 
 use PhpParser\Node\Param;
-use PhpParser\Node\Stmt\ClassMethod;
+use PhpParser\Node\Stmt;
+use RunOpenCode\AbstractBuilder\Utils\MethodUtils;
 
 /**
  * Class MethodMetadata
@@ -64,6 +65,11 @@ class MethodMetadata
     private $parameters;
 
     /**
+     * @var \PhpParser\Node\Stmt\ClassMethod
+     */
+    private $ast;
+
+    /**
      * MethodMetadata constructor.
      *
      * @param string $name
@@ -74,8 +80,9 @@ class MethodMetadata
      * @param bool $byRef
      * @param bool $static
      * @param ParameterMetadata[] $parameters
+     * @param \PhpParser\Node\Stmt\ClassMethod $ast
      */
-    public function __construct($name, $abstract = false, $final = false, $visibility = self::PUBLIC, $returnType = null, $byRef = false, $static = false, array $parameters)
+    public function __construct($name, $abstract = false, $final = false, $visibility = self::PUBLIC, $returnType = null, $byRef = false, $static = false, array $parameters, Stmt\ClassMethod $ast)
     {
         $this->name = $name;
         $this->abstract = $abstract;
@@ -85,6 +92,7 @@ class MethodMetadata
         $this->byRef = $byRef;
         $this->static = $static;
         $this->parameters = $parameters;
+        $this->ast = $ast;
     }
 
     /**
@@ -194,12 +202,20 @@ class MethodMetadata
     }
 
     /**
+     * @return \PhpParser\Node\Stmt\ClassMethod
+     */
+    public function getAst()
+    {
+        return $this->ast;
+    }
+
+    /**
      * Create method metadata instance from \PhpParser\Node\Stmt\ClassMethod
      *
-     * @param ClassMethod $method
+     * @param \PhpParser\Node\Stmt\ClassMethod $method
      * @return MethodMetadata|static
      */
-    public static function fromClassMethod(ClassMethod $method)
+    public static function fromClassMethod(Stmt\ClassMethod $method)
     {
         $parameters = [];
 
@@ -210,25 +226,16 @@ class MethodMetadata
             $parameters[] = ParameterMetadata::fromParameter($param);
         }
 
-        $visibility = self::PRIVATE;
-
-        if ($method->isProtected()) {
-            $visibility = self::PROTECTED;
-        }
-
-        if ($method->isPublic()) {
-            $visibility = self::PUBLIC;
-        }
-
         return new static(
             $method->name,
             $method->isAbstract(),
             $method->isFinal(),
-            $visibility,
+            MethodUtils::getVisibility($method->flags),
             $method->getReturnType(),
             $method->returnsByRef(),
             $method->isStatic(),
-            $parameters
+            $parameters,
+            $method
         );
     }
 }
