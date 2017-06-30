@@ -138,7 +138,7 @@ class FileMetadataIntrospectionVisitor extends NodeVisitorAbstract
              */
             $filemetadata = (new MetadataLoader())->load($name);
 
-            return $filemetadata->getClasses()[$name];
+            return $filemetadata->getClass($name);
         }
 
         return null;

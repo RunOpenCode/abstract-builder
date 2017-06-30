@@ -44,7 +44,7 @@ abstract class AbstractBuilder implements \ArrayAccess
     }
 
     /**
-     * Builds new building class from provided arguments.
+     * Builds new building class instance from provided arguments.
      *
      * @return object
      */

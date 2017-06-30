@@ -91,6 +91,14 @@ class ClassMetadata
     }
 
     /**
+     * @return string
+     */
+    public function getShortName()
+    {
+        return end($parts = explode('\\', $this->name));
+    }
+
+    /**
      * @return bool
      */
     public function isAutoloadable()
@@ -289,42 +297,5 @@ class ClassMetadata
     public function __toString()
     {
         return $this->getName();
-    }
-
-    /**
-     * Initialize new, non-existing class.
-     *
-     * @param string $name
-     *
-     * @return ClassMetadata|static $this
-     */
-    public static function create($name)
-    {
-        return new static($name);
-    }
-
-    /**
-     * Clones original metadata object, with possible values overwrite
-     *
-     * @param ClassMetadata $original
-     * @param array $overwrite
-     *
-     * @return ClassMetadata|static $this
-     */
-    public static function clone(ClassMetadata $original, array $overwrite = [])
-    {
-        $data = [
-            'name' => $original->getName(),
-            'parent' => $original->getParent(),
-            'traits' => $original->getTraits(),
-            'final' => $original->isFinal(),
-            'abstract ' => $original->isAbstract(),
-            'methods' => $original->getMethods(),
-            'ast' => $original->getAst(),
-        ];
-
-        $data = array_merge($data, $overwrite);
-
-        return (new \ReflectionClass(static::class))->newInstanceArgs(array_values($data));
     }
 }

@@ -9,14 +9,19 @@
  */
 namespace RunOpenCode\AbstractBuilder\Command;
 
+use RunOpenCode\AbstractBuilder\AbstractBuilder;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Ast\MetadataLoader;
+use RunOpenCode\AbstractBuilder\Command\Question\ClassChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\GetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\MethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\SetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Style\RunOpenCodeStyle;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
+use RunOpenCode\AbstractBuilder\Generator\BuilderGenerator;
+use RunOpenCode\AbstractBuilder\ReflectiveAbstractBuilder;
+use RunOpenCode\AbstractBuilder\Utils\ClassUtils;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -53,6 +58,11 @@ class GenerateBuilderCommand extends Command
     private $loader;
 
     /**
+     * @var BuilderGenerator
+     */
+    private $generator;
+
+    /**
      * {@inheritdoc}
      */
     protected function configure()
@@ -67,6 +77,7 @@ class GenerateBuilderCommand extends Command
             ->addOption('withReturnTypes', '-r', InputOption::VALUE_NONE, 'Generate methods with return types declarations.');
 
         $this->loader = new MetadataLoader();
+        $this->generator = new BuilderGenerator();
     }
 
     /**
@@ -84,20 +95,20 @@ class GenerateBuilderCommand extends Command
 
         try {
             /**
-             * @var ClassMetadata $buildingClass
+             * @var ClassChoice $buildingClassChoice
              */
-            $buildingClass = $this->getBuildingClass();
-            $this->style->info(sprintf('Builder class for class "%s" will be generated.', $buildingClass->getFqcn()));
+            $buildingClassChoice = $this->getBuildingClass();
+            $this->style->info(sprintf('Builder class for class "%s" will be generated.', $buildingClassChoice->getClass()->getName()));
 
             /**
-             * @var ClassMetadata $builderClass
+             * @var ClassChoice $builderClassChoice
              */
-            $builderClass = $this->getBuilderClass($buildingClass);
-            $this->style->info(sprintf('Full qualified namespace for builder class is "%s".', $builderClass->getFqcn()));
-            $this->style->info(sprintf('Path to file where builder class will be saved is "%s".', $builderClass->getFilename()));
-            $builderClass->isAutoloadable() ? $this->style->info('Existing builder class will be updated.') : $this->style->info('New builder class will be created.');
+            $builderClassChoice = $this->getBuilderClass($buildingClassChoice);
+            $this->style->info(sprintf('Full qualified namespace for builder class is "%s".', $builderClassChoice->getClass()->getName()));
+            $this->style->info(sprintf('Path to file where builder class will be saved is "%s".', $builderClassChoice->getFile()->getFilename()));
+            $builderClassChoice->getClass()->isAutoloadable() ? $this->style->info('Existing builder class will be updated.') : $this->style->info('New builder class will be created.');
 
-            $methods = $this->getMethodsToGenerate($buildingClass, $builderClass);
+            $methods = $this->getMethodsToGenerate($buildingClassChoice, $builderClassChoice);
             $this->style->info('Methods to generate are:');
             $this->style->ul($methods);
 
@@ -111,8 +122,9 @@ class GenerateBuilderCommand extends Command
     /**
      * Get class name for which skeleton should be built.
      *
-     * @return ClassMetadata
+     * @return ClassChoice
      *
+     * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      */
     private function getBuildingClass()
@@ -126,72 +138,98 @@ class GenerateBuilderCommand extends Command
             $class = $helper->ask($this->input, $this->output, $question);
         }
 
-        $metadata = $this->loader->load($class);
+        $fileMetadata = $this->loader->load($class);
+        $classMetadata = null;
 
-
-
-        var_dump($metadata->getClasses()['RunOpenCode\AbstractBuilder\Tests\Fixtures\Message']->getTraits());exit;
-
-        if (null === ($constructor = $metadata->getPublicMethod('__construct'))) {
-            throw new InvalidArgumentException('Builder class can not be generated for class without constructor.');
+        if (class_exists($class)) {
+            $classMetadata = $fileMetadata->getClass($class);
         }
 
-        if (0 === count($constructor->getParameters())) {
-            throw new InvalidArgumentException('Builder class can not be generated for class with constructor without arguments.');
+        if (1 === count($fileMetadata->getClasses())) {
+            $classMetadata = array_values($fileMetadata->getClasses())[0];
         }
 
-        return $metadata;
+        if (null === $classMetadata) {
+            throw new RuntimeException(sprintf('It is not possible to extract single class metadata from "%s", found %s definition(s).', $class, count($fileMetadata->getClasses())));
+        }
+
+        if (!ClassUtils::isBuildable($classMetadata)) {
+            throw new InvalidArgumentException(sprintf('Builder class can not be generated for "%s", class has to have constructor with some parameters.', $classMetadata->getName()));
+        }
+
+        return new ClassChoice($fileMetadata, $classMetadata);
     }
 
     /**
      * Get class name for builder class.
      *
-     * @param ClassMetadata $buildingClass
+     * @param ClassChoice $buildingClass
      *
-     * @return ClassMetadata
+     * @return ClassChoice
+     * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      */
-    private function getBuilderClass(ClassMetadata $buildingClass)
+    private function getBuilderClass(ClassChoice $buildingClass)
     {
         $class = $this->input->getArgument('builder');
 
         if (null === $class) {
-            $default = sprintf('%sBuilder', $buildingClass->getFqcn());
+            $default = sprintf('%sBuilder', $buildingClass->getClass()->getShortName());
             $helper = $this->getHelper('question');
             $question = new Question(sprintf('Enter full qualified class name of your builder class (default: "%s"): ', $default), $default);
 
             $class = $helper->ask($this->input, $this->output, $question);
         }
 
-        if (class_exists($class, true) || file_exists($class)) {
-            return $this->loader->load($class);
+        $classChoice = null;
+
+        if (class_exists($class, true)) {
+            $fileMetadata = $this->loader->load($class);
+            $classMetadata = $fileMetadata->getClass($class);
+            $classChoice = new ClassChoice($fileMetadata, $classMetadata);
+
+            if (null !== $this->input->getArgument('location')) {
+                throw new InvalidArgumentException('Builder class already exists and its location can not be changed.');
+            }
         }
 
-        return $this->getBuilderLocation(ClassMetadata::create($class));
+        if (file_exists($class)) {
+            $fileMetadata = $this->loader->load($class);
+
+            if (1 !== count($fileMetadata->getClasses())) {
+                throw new RuntimeException(sprintf('It is not possible to extract single class metadata from "%s", found %s definition(s).', $class, count($fileMetadata->getClasses())));
+            }
+
+            $classMetadata = array_values($fileMetadata->getClasses())[0];
+            $classChoice = new ClassChoice($fileMetadata, $classMetadata);
+        }
+
+        if (null === $classChoice) {
+            $classChoice = $this->generateBuilder($buildingClass, $class);
+        }
+
+        if (!ClassUtils::isBuilder($classChoice->getClass())) {
+            throw new RuntimeException(sprintf('Builder class must implement either "%s" or "%s", none of those detected for "%s".', ReflectiveAbstractBuilder::class, AbstractBuilder::class, $classChoice->getClass()->getName()));
+        }
+
+        return $classChoice;
     }
 
     /**
-     * Get builder class location.
+     * Generate new builder class.
      *
-     * @param ClassMetadata $builderClass
+     * @param ClassChoice $buildingClass
+     * @param string $builderClassName
      *
-     * @return ClassMetadata
+     * @return ClassChoice
      *
      * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
      * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      */
-    private function getBuilderLocation(ClassMetadata $builderClass)
+    private function generateBuilder(ClassChoice $buildingClass, $builderClassName)
     {
         $location = $this->input->getArgument('location');
-
-        if (null !== $location && $builderClass->isAutoloadable() && $location !== $builderClass->getFilename()) {
-            throw new InvalidArgumentException(sprintf('You can not provide new file location for existing builder ("%s" to "%s").', $builderClass->getFilename(), $location));
-        }
-
-        if ($builderClass->isAutoloadable()) {
-            return $builderClass;
-        }
 
         if (null === $location) {
             $helper = $this->getHelper('question');
@@ -207,10 +245,14 @@ class GenerateBuilderCommand extends Command
                 throw new RuntimeException(sprintf('Directory on path "%s" is not writeable.', $path));
             }
 
-            $location = $path.'/'.end(explode('/', $builderClass->getClass())).'.php';
+            $parts = explode('/', $builderClassName);
+            $location = $path.'/'.end($parts).'.php';
         }
 
-        return ClassMetadata::clone($builderClass, [ 'filename' => $location ]);
+        $fileMetadata = $this->generator->create($buildingClass, $location, $builderClassName);
+        $classMetadata = array_values($fileMetadata->getClasses())[0];
+
+        return new ClassChoice($fileMetadata, $classMetadata);
     }
 
     /**
