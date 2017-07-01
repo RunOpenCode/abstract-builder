@@ -11,6 +11,7 @@ namespace RunOpenCode\AbstractBuilder\Command;
 
 use RunOpenCode\AbstractBuilder\AbstractBuilder;
 use RunOpenCode\AbstractBuilder\Ast\MetadataLoader;
+use RunOpenCode\AbstractBuilder\Ast\Printer;
 use RunOpenCode\AbstractBuilder\Command\Question\ClassChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\GetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Question\MethodChoice;
@@ -18,7 +19,6 @@ use RunOpenCode\AbstractBuilder\Command\Question\SetterMethodChoice;
 use RunOpenCode\AbstractBuilder\Command\Style\RunOpenCodeStyle;
 use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
-use RunOpenCode\AbstractBuilder\Generator\BuilderGenerator;
 use RunOpenCode\AbstractBuilder\Generator\BuilderClassFactory;
 use RunOpenCode\AbstractBuilder\ReflectiveAbstractBuilder;
 use RunOpenCode\AbstractBuilder\Utils\ClassUtils;
@@ -53,11 +53,6 @@ class GenerateBuilderCommand extends Command
     private $output;
 
     /**
-     * @var BuilderGenerator
-     */
-    private $generator;
-
-    /**
      * {@inheritdoc}
      */
     protected function configure()
@@ -80,8 +75,6 @@ class GenerateBuilderCommand extends Command
         $this->input = $input;
         $this->output = $output;
         $this->style = new RunOpenCodeStyle($input, $output);
-
-        $this->generator = BuilderGenerator::getInstance();
 
         $this->style->displayLogo();
 
@@ -109,7 +102,7 @@ class GenerateBuilderCommand extends Command
             $this->style->info('Methods to generate are:');
             $this->style->ul($methodChoices);
 
-            $classFactory = new BuilderClassFactory($builderChoice->getClass(), $subjectChoice->getClass(), $this->input->getOption('rtd'));
+            $classFactory = new BuilderClassFactory($subjectChoice->getClass(), $builderChoice->getClass(), $this->input->getOption('rtd'));
 
             foreach ($methodChoices as $methodChoice) {
 
@@ -126,7 +119,7 @@ class GenerateBuilderCommand extends Command
                 throw new RuntimeException(sprintf('Expected instance of "%s" or "%s", got "%s".', GetterMethodChoice::class, SetterMethodChoice::class, get_class($methodChoice)));
             }
 
-            echo $this->generator->write($builderChoice->getFile());
+            echo Printer::getInstance()->print($builderChoice->getFile());
 
         } catch (\Exception $e) {
             $this->style->error($e->getMessage());
@@ -265,7 +258,7 @@ class GenerateBuilderCommand extends Command
             $location = $path.'/'.end($parts).'.php';
         }
 
-        $fileMetadata = (new BuilderClassFactory(null, $subjectChoice->getClass(), $this->input->getOption('rtd')))->initialize($location, $builderClassName);
+        $fileMetadata = (new BuilderClassFactory($subjectChoice->getClass(), null, $this->input->getOption('rtd')))->initialize($location, $builderClassName);
         $classMetadata = array_values($fileMetadata->getClasses())[0];
 
         return new ClassChoice($fileMetadata, $classMetadata);
