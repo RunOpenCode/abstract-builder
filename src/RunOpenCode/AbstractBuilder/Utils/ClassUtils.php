@@ -67,4 +67,14 @@ final class ClassUtils
 
         return implode('\\', $parts);
     }
+
+    public static function getShortName($class)
+    {
+        if ($class instanceof ClassMetadata) {
+            return $class->getShortName();
+        }
+
+        $parts = explode('\\', $class);
+        return array_pop($parts);
+    }
 }

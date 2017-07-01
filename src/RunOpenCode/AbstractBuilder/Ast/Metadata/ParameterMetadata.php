@@ -44,6 +44,11 @@ class ParameterMetadata
     private $default;
 
     /**
+     * @var Param
+     */
+    private $ast;
+
+    /**
      * ParameterMetadata constructor.
      *
      * @param string $name
@@ -52,13 +57,14 @@ class ParameterMetadata
      * @param bool $variadic
      * @param mixed $default
      */
-    public function __construct($name, $type = null, $byRef = false, $variadic = false, $default = null)
+    public function __construct($name, $type = null, $byRef = false, $variadic = false, $default = null, Param $ast = null)
     {
         $this->name = $name;
         $this->type = $type;
         $this->byRef = $byRef;
         $this->variadic = $variadic;
         $this->default = $default;
+        $this->ast = $ast;
     }
 
     /**
@@ -102,6 +108,14 @@ class ParameterMetadata
     }
 
     /**
+     * @return Param
+     */
+    public function getAst()
+    {
+        return $this->ast;
+    }
+
+    /**
      * Creates parameter metadata instance from \PhpParser\Node\Param
      *
      * @param Param $param
@@ -114,7 +128,8 @@ class ParameterMetadata
             $param->type,
             $param->byRef,
             $param->variadic,
-            $param->default
+            $param->default,
+            $param
         );
     }
 }

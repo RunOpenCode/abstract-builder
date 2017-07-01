@@ -2,57 +2,44 @@
 
 namespace RunOpenCode\AbstractBuilder\Generator;
 
-use PhpParser\BuilderFactory;
-use PhpParser\Parser;
-use PhpParser\ParserFactory;
-use PhpParser\PrettyPrinter\Standard;
+use RunOpenCode\AbstractBuilder\Ast\BuilderFactory;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\FileMetadata;
-use RunOpenCode\AbstractBuilder\Ast\Metadata\MethodMetadata;
 use RunOpenCode\AbstractBuilder\Ast\MetadataLoader;
-use RunOpenCode\AbstractBuilder\Command\Question\ClassChoice;
+use RunOpenCode\AbstractBuilder\Ast\Printer;
 use RunOpenCode\AbstractBuilder\ReflectiveAbstractBuilder;
 use RunOpenCode\AbstractBuilder\Utils\ClassUtils;
-use PHPParser\Node;
 
 class BuilderGenerator
 {
+    /**
+     * @var BuilderGenerator
+     */
+    private static $instance;
+
     /**
      * @var BuilderFactory
      */
     private $factory;
 
     /**
-     * @var Parser
-     */
-    private $parser;
-
-    /**
-     * @var MetadataLoader
-     */
-    private $loader;
-
-    /**
-     * @var Standard
+     * @var Printer
      */
     private $printer;
 
-    public function __construct()
+    private function __construct()
     {
-        $this->factory = new BuilderFactory();
-        $this->parser = (new ParserFactory())->create(ParserFactory::ONLY_PHP7);
-        $this->loader = new MetadataLoader();
-        $this->printer = new Standard();
+        $this->factory = BuilderFactory::getInstance();
+        $this->printer = Printer::getInstance();
     }
 
-    public function create(ClassChoice $buildingClassChoice, $builderFilename, $builderClassName)
+    public function initializeBuilder(ClassMetadata $subject, $filename, $class, $withReturnTypeDeclaration = false)
     {
-
-        $namespace = $this->factory->namespace($ns = ClassUtils::getNamespace($builderClassName));
+        $namespace = $this->factory->namespace($ns = ClassUtils::getNamespace($class));
 
         $namespace->addStmt($this->factory->use(ReflectiveAbstractBuilder::class));
 
-        $builderClass = $this->factory->class($builderClassName)
+        $builder = $this->factory->class(ClassUtils::getShortName($class))
             ->extend('ReflectiveAbstractBuilder')
             ->setDocComment(sprintf(
                 '
@@ -68,93 +55,54 @@ class BuilderGenerator
  *
  * @see %s
  * @see https://en.wikipedia.org/wiki/Builder_pattern
- */', $builderClassName, $buildingClassChoice->getClass()->getName(), $ns, ReflectiveAbstractBuilder::class));
+ */', $class, $subject->getName(), $ns, ReflectiveAbstractBuilder::class));
 
-        if ($buildingClassChoice->getClass()->isFinal()) {
-            $builderClass->makeFinal();
+
+        if ($subject->isFinal()) {
+            $builder->makeFinal();
         }
 
-        if ($buildingClassChoice->getClass()->isAbstract()) {
-            $builderClass->makeAbstract();
+        if ($subject->isAbstract()) {
+            $builder->makeAbstract();
         }
 
-        if (!$buildingClassChoice->getClass()->isAbstract()) {
-
-            $buildMethod = $this->factory->method('build')
-                ->makePublic()
-                ->addStmts($this->parser->parse(
-                    <<<'CODE'
-<?php return parent::build();
-CODE
-
-                ))
-                ->setDocComment(sprintf(
-                    '
-/**
- * Builds new instance of %s from provided arguments. 
- *
- * @return %s
- */', $buildingClassChoice->getClass()->getName(), $buildingClassChoice->getClass()->getName()
-                ));
-
-            $builderClass->addStmt($buildMethod->getNode());
-        }
-
-        $getObjectFqcnMethod = $this->factory->method('getObjectFqcn')
-            ->makeProtected()
-            ->addStmt(new Node\Stmt\Return_(new Node\Scalar\String_($builderClassName)))
-            ->setDocComment(
-                '
-/**
- * {@inheritdoc}
- */'
-            );
-
-        $builderClass->addStmt($getObjectFqcnMethod->getNode());
-
-        $configureParametersMethod = $this->factory->method('configureParameters')
-            ->makeProtected()
-            ->addStmts($this->parser->parse(
-                <<<'CODE'
-<?php $defaults = parent::configureParameters();
-// Modify default values here
-return $defaults;
-CODE
-
-            ))
-            ->setDocComment(
-                '
-/**
- * You can override default building parameter values here 
- *
- * {@inheritdoc}
- */'
-            );
-
-        $builderClass->addStmt($configureParametersMethod->getNode());
-
-        $namespace->addStmt($builderClass->getNode());
-
-        $classMetadata = new ClassMetadata(
-            $builderClassName,
-            $this->loader->load(ReflectiveAbstractBuilder::class)->getClass(ReflectiveAbstractBuilder::class),
+        $builder = new ClassMetadata(
+            $class,
+            MetadataLoader::create()->load(ReflectiveAbstractBuilder::class)->getClass(ReflectiveAbstractBuilder::class),
             [],
-            $buildingClassChoice->getClass()->isFinal(),
-            $buildingClassChoice->getClass()->isAbstract(),
-            [
-                MethodMetadata::fromClassMethod($configureParametersMethod->getNode()),
-                MethodMetadata::fromClassMethod($getObjectFqcnMethod->getNode())
-            ],
-            $builderClass->getNode()
+            $subject->isFinal(),
+            $subject->isAbstract(),
+            [],
+            $builder->getNode()
         );
 
-        $fileMetadata = new FileMetadata($builderFilename, [], [$classMetadata], [], [$namespace->getNode()]);
+        $namespace->addStmt($builder->getAst());
 
-        return $fileMetadata;
+        $classFactory = new BuilderClassFactory($builder, $subject, $withReturnTypeDeclaration);
+
+        $classFactory
+            ->addBuildMethod()
+            ->addGetObjectFqcnMethod()
+            ->addConfigureParametersMethod();
+
+        if (!$builder->isAbstract()) {
+            $classFactory->addCreateBuilderMethod();
+        }
+
+        return new FileMetadata($filename, [], [$builder], [], [$namespace->getNode()]);
     }
 
     public function write(FileMetadata $file)
     {
-        return $this->printer->prettyPrint($file->getAst());
+        return $this->printer->prettyPrintFile($file->getAst());
+    }
+
+    public static function getInstance()
+    {
+        if (null === self::$instance) {
+            self::$instance = new static();
+        }
+
+        return self::$instance;
     }
 }

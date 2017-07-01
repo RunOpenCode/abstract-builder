@@ -4,7 +4,6 @@ namespace RunOpenCode\AbstractBuilder\Ast;
 
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
-use PhpParser\ParserFactory;
 use RunOpenCode\AbstractBuilder\Ast\Visitor\FileMetadataIntrospectionVisitor;
 use RunOpenCode\AbstractBuilder\Exception\RuntimeException;
 
@@ -25,9 +24,9 @@ class MetadataLoader
      */
     private $introspector;
 
-    public function __construct()
+    private function __construct()
     {
-        $this->parser = (new ParserFactory())->create(ParserFactory::ONLY_PHP7);
+        $this->parser = Parser::getInstance();
         $this->traverser = new NodeTraverser();
 
         $this->traverser->addVisitor(new NameResolver());
@@ -67,5 +66,15 @@ class MetadataLoader
         $this->traverser->traverse($this->parser->parse(file_get_contents($filename)));
 
         return $this->introspector->getMetadata();
+    }
+
+    /**
+     * Singleton implementation
+     *
+     * @return MetadataLoader
+     */
+    public static function create()
+    {
+        return new static();
     }
 }

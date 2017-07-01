@@ -136,7 +136,7 @@ class FileMetadataIntrospectionVisitor extends NodeVisitorAbstract
             /**
              * @var FileMetadata $filemetadata
              */
-            $filemetadata = (new MetadataLoader())->load($name);
+            $filemetadata = MetadataLoader::create()->load($name);
 
             return $filemetadata->getClass($name);
         }
@@ -146,7 +146,7 @@ class FileMetadataIntrospectionVisitor extends NodeVisitorAbstract
 
     private function getTraitMetadata($name)
     {
-        $filemetadata = (new MetadataLoader())->load($name);
+        $filemetadata = MetadataLoader::create()->load($name);
         return $filemetadata->getTraits()[$name];
     }
 
