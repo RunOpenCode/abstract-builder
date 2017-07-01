@@ -265,7 +265,7 @@ class GenerateBuilderCommand extends Command
             $location = $path.'/'.end($parts).'.php';
         }
 
-        $fileMetadata = $this->generator->initializeBuilder($subjectChoice->getClass(), $location, $builderClassName, $this->input->getOption('rtd'));
+        $fileMetadata = (new BuilderClassFactory(null, $subjectChoice->getClass(), $this->input->getOption('rtd')))->initialize($location, $builderClassName);
         $classMetadata = array_values($fileMetadata->getClasses())[0];
 
         return new ClassChoice($fileMetadata, $classMetadata);
