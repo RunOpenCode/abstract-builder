@@ -10,6 +10,7 @@
 namespace RunOpenCode\AbstractBuilder\Command;
 
 use RunOpenCode\AbstractBuilder\AbstractBuilder;
+use RunOpenCode\AbstractBuilder\Ast\Metadata\FileMetadata;
 use RunOpenCode\AbstractBuilder\Ast\MetadataLoader;
 use RunOpenCode\AbstractBuilder\Ast\Printer;
 use RunOpenCode\AbstractBuilder\Command\Question\ClassChoice;
@@ -64,7 +65,8 @@ class GenerateBuilderCommand extends Command
             ->addArgument('builder', InputArgument::OPTIONAL, 'Full qualified class name of builder class can be autoloaded, or it will be autoloaded, or path to file with class definition.')
             ->addArgument('location', InputArgument::OPTIONAL, 'Path to location of file where builder class will be saved.')
             ->addOption('all', '-a', InputOption::VALUE_NONE, 'Generate all methods by default.')
-            ->addOption('rtd', '-r', InputOption::VALUE_NONE, 'Generate methods with return types declarations.');
+            ->addOption('rtd', '-r', InputOption::VALUE_NONE, 'Generate methods with return types declarations.')
+            ->addOption('print', '-p', InputOption::VALUE_NONE, 'Only display code without creating/modifying class file.');
     }
 
     /**
@@ -119,11 +121,14 @@ class GenerateBuilderCommand extends Command
                 throw new RuntimeException(sprintf('Expected instance of "%s" or "%s", got "%s".', GetterMethodChoice::class, SetterMethodChoice::class, get_class($methodChoice)));
             }
 
-            echo Printer::getInstance()->print($builderChoice->getFile());
+            $this->write($builderChoice->getFile());
+
+            $this->style->success('Builder class successfully generated!');
+            return 0;
 
         } catch (\Exception $e) {
             $this->style->error($e->getMessage());
-            return 0;
+            return -1;
         }
     }
 
@@ -241,21 +246,29 @@ class GenerateBuilderCommand extends Command
 
         if (null === $location) {
             $helper = $this->getHelper('question');
-            $question = new Question('Enter path to directory where you want to store builder class: ', null);
+            $question = new Question('Enter path where you want to store a builder class: ', null);
 
-            $path = str_replace('\\', '/', ltrim($helper->ask($this->input, $this->output, $question), '/'));
+            $location = $helper->ask($this->input, $this->output, $question);
+        }
 
-            if (!is_dir($path)) {
-                throw new RuntimeException(sprintf('Provided path "%s" is not path to directory.', $path));
-            }
+        $location = str_replace('\\', '/', ltrim($location, '/'));
 
-            if (!is_writable($path)) {
-                throw new RuntimeException(sprintf('Directory on path "%s" is not writeable.', $path));
-            }
+        if (substr($location, -strlen($location)) !== '.php') {
+            $location = $location.'/'.ClassUtils::getShortName($builderClassName).'.php';
+        }
 
-            $parts = explode('/', str_replace('\\', '/', $builderClassName));
+        $directory = realpath(dirname($location));
 
-            $location = $path.'/'.end($parts).'.php';
+        if (!is_dir($directory)) {
+            throw new RuntimeException(sprintf('Provided path to directory "%s" where builder class ought to be stored is not path to directory.', $directory));
+        }
+
+        if (!is_writable($directory)) {
+            throw new RuntimeException(sprintf('Directory on path "%s" is not writeable.', $directory));
+        }
+
+        if (is_file($location) && !is_writable($location)) {
+            throw new RuntimeException(sprintf('Provided path to builder class "%s" is not writeable.', $location));
         }
 
         $fileMetadata = (new BuilderClassFactory($subjectChoice->getClass(), null, $this->input->getOption('rtd')))->initialize($location, $builderClassName);
@@ -296,6 +309,10 @@ class GenerateBuilderCommand extends Command
             }
         }
 
+        if (0 === count($methods)) {
+            throw new RuntimeException('There are no methods to generate.');
+        }
+
         if (true !== $this->input->getOption('all')) {
 
             $helper = $this->getHelper('question');
@@ -315,10 +332,31 @@ class GenerateBuilderCommand extends Command
             });
         }
 
-        if (0 === count($methods)) {
-            throw new RuntimeException('There are no methods to generate.');
+        return $methods;
+    }
+
+    /**
+     * Print or display builder class file
+     *
+     * @param FileMetadata $file
+     */
+    private function write(FileMetadata $file)
+    {
+        if ($this->input->getOption('print')) {
+
+            $this->style->title('Generated code:');
+
+            $lines = explode("\n", Printer::getInstance()->print($file));
+
+            $counter = 0;
+
+            foreach ($lines as $line) {
+                $this->style->writeln(sprintf('%s: %s', ++$counter, $line));
+            }
+
+            return;
         }
 
-        return $methods;
+        Printer::getInstance()->dump($file);
     }
 }

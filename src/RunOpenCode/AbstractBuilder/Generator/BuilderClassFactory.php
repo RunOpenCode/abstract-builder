@@ -2,8 +2,8 @@
 
 namespace RunOpenCode\AbstractBuilder\Generator;
 
+use PhpParser\Comment;
 use PhpParser\Node\Param;
-use PhpParser\Node\Stmt;
 use PhpParser\Node\Stmt\ClassMethod;
 use RunOpenCode\AbstractBuilder\Ast\BuilderFactory;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
@@ -71,10 +71,10 @@ class BuilderClassFactory
  * Builds new instance of %s from provided arguments. 
  *
  * @return %s
- */', $this->subject->getName(), $this->subject->getName()));
+ */', $this->subject->getFqcn(), $this->subject->getFqcn()));
 
         if ($this->withReturnTypeDeclaration) {
-            $method->setReturnType($this->subject->getName());
+            $method->setReturnType($this->subject->getFqcn());
         }
 
         $this->appendMethod($method->getNode());
@@ -85,11 +85,11 @@ class BuilderClassFactory
     public function addCreateBuilderMethod()
     {
         if ($this->builder->hasPublicMethod('createBuilder', false)) {
-            throw new LogicException(sprintf('Method "createBuilder()" is already defined in "%s".', $this->builder->getName()));
+            throw new LogicException(sprintf('Method "createBuilder()" is already defined in "%s".', $this->builder->getFqcn()));
         }
 
         if ($this->builder->isAbstract()) {
-            throw new LogicException(sprintf('Method "createBuilder()" can not be generated for class "%s" since it\'s abstract.', $this->builder->getName()));
+            throw new LogicException(sprintf('Method "createBuilder()" can not be generated for class "%s" since it\'s abstract.', $this->builder->getFqcn()));
         }
 
         $method = $this->factory->method('createBuilder')
@@ -104,10 +104,10 @@ class BuilderClassFactory
  * @return %s
  *
  * @throws \RunOpenCode\AbstractBuilder\Exception\RuntimeException
- */', $this->builder->getName()));
+ */', $this->builder->getFqcn()));
 
         if ($this->withReturnTypeDeclaration) {
-            $method->setReturnType($this->builder->getName());
+            $method->setReturnType($this->builder->getFqcn());
         }
 
         $this->appendMethod($method->getNode());
@@ -118,12 +118,12 @@ class BuilderClassFactory
     public function addGetObjectFqcnMethod()
     {
         if ($this->builder->hasPublicMethod('getObjectFqcn', false)) {
-            throw new LogicException(sprintf('Method "getObjectFqcn()" is already defined in "%s".', $this->builder->getName()));
+            throw new LogicException(sprintf('Method "getObjectFqcn()" is already defined in "%s".', $this->builder->getFqcn()));
         }
 
         $method = $this->factory->method('getObjectFqcn')
             ->makeProtected()
-            ->addStmts($this->parser->parse(sprintf('<?php return %s::class;', $this->subject->getName())))
+            ->addStmts($this->parser->parse(sprintf('<?php return %s::class;', $this->subject->getFqcn())))
             ->setDocComment(
                 '
 /**
@@ -143,7 +143,7 @@ class BuilderClassFactory
     public function addConfigureParametersMethod()
     {
         if ($this->builder->hasPublicMethod('configureParameters', false)) {
-            throw new LogicException(sprintf('Method "configureParameters()" is already defined in "%s".', $this->builder->getName()));
+            throw new LogicException(sprintf('Method "configureParameters()" is already defined in "%s".', $this->builder->getFqcn()));
         }
 
         $method = $this->factory->method('configureParameters')
@@ -210,10 +210,10 @@ class BuilderClassFactory
  * Set value for constructor parameter %s 
  *
  * @return %s
- */', $parameter->getName(), $this->builder->getName()));
+ */', $parameter->getName(), $this->builder->getFqcn()));
 
         if ($this->withReturnTypeDeclaration) {
-            $method->setReturnType($this->builder->getName());
+            $method->setReturnType($this->builder->getFqcn());
         }
 
         $this->appendMethod($method->getNode());
@@ -233,10 +233,8 @@ class BuilderClassFactory
     {
         $namespace = $this->factory->namespace($ns = ClassUtils::getNamespace($class));
 
-        $namespace->addStmt($this->factory->use(ReflectiveAbstractBuilder::class));
-
         $builderAstFactory = $this->factory->class(ClassUtils::getShortName($class))
-            ->extend('ReflectiveAbstractBuilder')
+            ->extend('\\'.ReflectiveAbstractBuilder::class)
             ->setDocComment(sprintf(
                 '
 /**
@@ -247,9 +245,9 @@ class BuilderClassFactory
  *
  * @package %s
  *
- * @see %s
+ * @see \%s
  * @see https://en.wikipedia.org/wiki/Builder_pattern
- */', $class, $this->subject->getName(), $ns, ReflectiveAbstractBuilder::class));
+ */', $class, $this->subject->getFqcn(), $ns, ReflectiveAbstractBuilder::class));
 
 
         if ($this->subject->isFinal()) {

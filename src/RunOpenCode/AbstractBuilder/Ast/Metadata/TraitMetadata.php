@@ -46,7 +46,7 @@ class TraitMetadata
         $this->name = $name;
 
         if (!ClassUtils::isClassNameValid($this->name)) {
-            throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP trait name.', $this->fqcn));
+            throw new InvalidArgumentException(sprintf('Provided full qualified class name "%s" is not valid PHP trait name.', $this->name));
         }
 
         $this->traits = $traits;
@@ -60,6 +60,14 @@ class TraitMetadata
     public function getName()
     {
         return $this->name;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFqcn()
+    {
+        return '\\'.$this->name;
     }
 
     /**

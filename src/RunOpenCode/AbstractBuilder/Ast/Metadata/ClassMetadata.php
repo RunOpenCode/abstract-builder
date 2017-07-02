@@ -68,7 +68,7 @@ class ClassMetadata
      */
     public function __construct($name, ClassMetadata $parent = null, array $traits = [], $final = false, $abstract = false, array $methods = [], Class_ $ast = null)
     {
-        $this->name = trim($name, '\\');
+        $this->name = $name;
 
         if (!ClassUtils::isClassNameValid($this->name)) {
             throw new InvalidArgumentException(sprintf('Provided class name "%s" is not valid PHP class name.', $this->name));
@@ -88,6 +88,14 @@ class ClassMetadata
     public function getName()
     {
         return $this->name;
+    }
+
+    /**
+     * @return string
+     */
+    public function getFqcn()
+    {
+        return '\\'.$this->name;
     }
 
     /**
