@@ -80,9 +80,9 @@ class MethodMetadata
      * @param bool $byRef
      * @param bool $static
      * @param ParameterMetadata[] $parameters
-     * @param \PhpParser\Node\Stmt\ClassMethod $ast
+     * @param \PhpParser\Node\Stmt\ClassMethod|null $ast
      */
-    public function __construct($name, $abstract = false, $final = false, $visibility = self::PUBLIC, $returnType = null, $byRef = false, $static = false, array $parameters, Stmt\ClassMethod $ast)
+    public function __construct($name, $abstract = false, $final = false, $visibility = self::PUBLIC, $returnType = null, $byRef = false, $static = false, array $parameters = [], Stmt\ClassMethod $ast = null)
     {
         $this->name = $name;
         $this->abstract = $abstract;

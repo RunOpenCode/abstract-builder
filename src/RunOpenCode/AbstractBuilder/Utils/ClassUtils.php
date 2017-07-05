@@ -11,6 +11,7 @@ namespace RunOpenCode\AbstractBuilder\Utils;
 
 use RunOpenCode\AbstractBuilder\AbstractBuilder;
 use RunOpenCode\AbstractBuilder\Ast\Metadata\ClassMetadata;
+use RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException;
 use RunOpenCode\AbstractBuilder\ReflectiveAbstractBuilder;
 
 /**
@@ -62,7 +63,7 @@ final class ClassUtils
     }
 
     /**
-     * Check if class is implemented builder class.
+     * Check if class is implementing required builder class.
      *
      * @param ClassMetadata $class
      *
@@ -74,19 +75,24 @@ final class ClassUtils
             return false;
         }
 
-        if (
-            null !== $class->getParent()
-            &&
-            (
+        $instanceOfAbstractBuilder = function (ClassMetadata $class) use (&$instanceOfAbstractBuilder) {
+
+            if (null === $class->getParent()) {
+                return false;
+            }
+
+            if (
                 ReflectiveAbstractBuilder::class === $class->getParent()->getName()
                 ||
                 AbstractBuilder::class === $class->getParent()->getName()
-            )
-        ) {
-            return true;
-        }
+            ) {
+                return true;
+            }
 
-        return self::isBuilder($class->getParent());
+            return $instanceOfAbstractBuilder($class->getParent());
+        };
+
+        return $instanceOfAbstractBuilder($class);
     }
 
     /**
@@ -94,7 +100,9 @@ final class ClassUtils
      *
      * @param $class
      *
-     * @return string
+     * @return string|null
+     *
+     * @throws \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
      */
     public static function getNamespace($class)
     {
@@ -102,7 +110,18 @@ final class ClassUtils
             $class = $class->getName();
         }
 
+        $class = trim($class, '\\');
+
         $parts = explode('\\', $class);
+
+        if (0 === count($parts)) {
+            throw new InvalidArgumentException(sprintf('Invalid class name "%s".', $class));
+        }
+
+        if (1 === count($parts)) {
+            return null;
+        }
+
         array_pop($parts);
 
         return implode('\\', $parts);
@@ -120,6 +139,8 @@ final class ClassUtils
         if ($class instanceof ClassMetadata) {
             return $class->getShortName();
         }
+
+        $class = trim($class, '\\');
 
         $parts = explode('\\', $class);
 
