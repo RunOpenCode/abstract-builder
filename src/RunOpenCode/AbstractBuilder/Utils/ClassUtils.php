@@ -112,11 +112,11 @@ final class ClassUtils
 
         $class = trim($class, '\\');
 
-        $parts = explode('\\', $class);
-
-        if (0 === count($parts)) {
+        if ('' === trim($class)) {
             throw new InvalidArgumentException(sprintf('Invalid class name "%s".', $class));
         }
+
+        $parts = explode('\\', $class);
 
         if (1 === count($parts)) {
             return null;
@@ -141,6 +141,10 @@ final class ClassUtils
         }
 
         $class = trim($class, '\\');
+
+        if ('' === trim($class)) {
+            throw new InvalidArgumentException(sprintf('Invalid class name "%s".', $class));
+        }
 
         $parts = explode('\\', $class);
 

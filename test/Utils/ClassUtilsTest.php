@@ -106,8 +106,8 @@ class ClassUtilsTest extends TestCase
             ['class' => '\\NoNamespace', 'expects' => null],
             ['class' => 'Namespace\\ClassName', 'expects' => 'Namespace'],
             ['class' => '\\Longer\\Namespace\\ClassName', 'expects' => 'Longer\\Namespace'],
+            ['class' => new ClassMetadata('\\Longer\\Namespace\\ClassName'), 'expects' => 'Longer\\Namespace'],
         ];
-
 
         foreach ($data as $case) {
             /**
@@ -120,5 +120,44 @@ class ClassUtilsTest extends TestCase
         }
     }
 
+    /**
+     * @test
+     * @expectedException \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
+     */
+    public function itThrowsExceptionWhenEmptyStringIsPassedForNamespace()
+    {
+        ClassUtils::getNamespace('');
+    }
+
+    /**
+     * @test
+     */
+    public function getShortName()
+    {
+        $data = [
+            ['class' => '\\NoNamespace', 'expects' => 'NoNamespace'],
+            ['class' => 'Namespace\\ClassName', 'expects' => 'ClassName'],
+            ['class' => new ClassMetadata('ClassName'), 'expects' => 'ClassName'],
+        ];
+
+        foreach ($data as $case) {
+            /**
+             * @var $class
+             * @var $expects
+             */
+            extract($case, EXTR_OVERWRITE);
+
+            $this->assertSame($expects, ClassUtils::getShortName($class));
+        }
+    }
+
+    /**
+     * @test
+     * @expectedException \RunOpenCode\AbstractBuilder\Exception\InvalidArgumentException
+     */
+    public function itThrowsExceptionWhenEmptyStringIsPassedForShortName()
+    {
+        ClassUtils::getShortName('');
+    }
 
 }

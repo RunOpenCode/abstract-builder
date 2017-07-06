@@ -103,7 +103,8 @@ class ClassMetadata
      */
     public function getShortName()
     {
-        return end($parts = explode('\\', $this->name));
+        $parts = explode('\\', $this->name);
+        return end($parts);
     }
 
     /**
