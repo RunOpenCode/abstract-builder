@@ -27,7 +27,7 @@ class ClassUtilsTest extends TestCase
     /**
      * @test
      */
-    public function validateClassName()
+    public function itValidatesClassName()
     {
         $data = [
             ['name' => 'this is invalid', 'expects' => false],
@@ -50,7 +50,7 @@ class ClassUtilsTest extends TestCase
     /**
      * @test
      */
-    public function isBuildable()
+    public function itChecksIfItIsBuildable()
     {
         $data = [
             ['class' => new ClassMetadata('nonbuildable', null, [], false, false, [new MethodMetadata('__construct')]), 'expects' => false],
@@ -73,7 +73,7 @@ class ClassUtilsTest extends TestCase
     /**
      * @test
      */
-    public function isBuilder()
+    public function itChecksIfItIsBuilder()
     {
         $data = [
             ['class' => new ClassMetadata('notbuilder'), 'expects' => false],
@@ -100,7 +100,7 @@ class ClassUtilsTest extends TestCase
     /**
      * @test
      */
-    public function getNamespace()
+    public function igGetsNamespace()
     {
         $data = [
             ['class' => '\\NoNamespace', 'expects' => null],
@@ -132,7 +132,7 @@ class ClassUtilsTest extends TestCase
     /**
      * @test
      */
-    public function getShortName()
+    public function itGetsShortName()
     {
         $data = [
             ['class' => '\\NoNamespace', 'expects' => 'NoNamespace'],

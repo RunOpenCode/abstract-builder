@@ -69,7 +69,7 @@ class MetadataLoader
     }
 
     /**
-     * Singleton implementation
+     * MetadataLoader Factory
      *
      * @return MetadataLoader
      */

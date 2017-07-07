@@ -49,7 +49,7 @@ class FileMetadata
      * @param array $traits
      * @param array $ast
      */
-    public function __construct($filename, array $uses = [], array $classes = [], array $traits = [], array $ast = null)
+    public function __construct($filename, array $uses = [], array $classes = [], array $traits = [], array $ast = [])
     {
         $this->filename = $filename;
         $this->uses = $uses;
